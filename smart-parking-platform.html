@@ -1,0 +1,1923 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Kito &mdash; Smart Parking Operations Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+/* ============ DESIGN TOKENS ============ */
+:root{
+  --ink:#0D1117;
+  --panel:#141A22;
+  --panel-raised:#1A222C;
+  --line:#26303B;
+  --line-soft:#1E2731;
+  --text:#E7EAEE;
+  --text-dim:#98A3B2;
+  --text-faint:#5D6B7B;
+  --go:#33D6A0;
+  --go-dim:#173B32;
+  --stop:#F0553C;
+  --stop-dim:#3B1F1A;
+  --scan:#4FA3F7;
+  --scan-dim:#17293D;
+  --warn:#F0B429;
+  --warn-dim:#3A2E10;
+  --violet:#9B8CFF;
+  --radius:6px;
+  --radius-sm:3px;
+  --mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --disp: 'Space Grotesk', sans-serif;
+  --body: 'Inter', sans-serif;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--ink);
+  color:var(--text);
+  font-family:var(--body);
+  font-size:14px;
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+::selection{background:var(--scan-dim);color:var(--text);}
+button{font-family:inherit;}
+::-webkit-scrollbar{width:9px;height:9px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--line);border-radius:5px;}
+a{color:inherit;}
+
+h1,h2,h3,h4{font-family:var(--disp);font-weight:600;margin:0;letter-spacing:-0.01em;}
+.mono{font-family:var(--mono);}
+
+/* ============ SHELL ============ */
+.shell{display:grid;grid-template-columns:220px 1fr;min-height:100vh;}
+.sidebar{
+  background:#0A0E13;
+  border-right:1px solid var(--line-soft);
+  display:flex;flex-direction:column;
+  padding:18px 12px;
+  position:sticky;top:0;height:100vh;
+}
+.brand{display:flex;align-items:center;gap:9px;padding:4px 8px 20px 8px;}
+.brand-mark{
+  width:26px;height:26px;border-radius:7px;
+  background:linear-gradient(135deg,var(--go),var(--scan));
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+}
+.brand-name{font-family:var(--disp);font-size:16px;font-weight:700;color:var(--text);}
+.brand-sub{font-size:10px;color:var(--text-faint);margin-top:-2px;letter-spacing:.03em;}
+
+.nav-group-label{font-size:10.5px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.08em;padding:14px 10px 6px;font-weight:600;}
+.nav-item{
+  display:flex;align-items:center;gap:10px;
+  padding:8px 10px;border-radius:var(--radius-sm);
+  color:var(--text-dim);cursor:pointer;font-size:13.5px;font-weight:500;
+  border:1px solid transparent;
+  transition:background .12s;
+}
+.nav-item:hover{background:#141A22;color:var(--text);}
+.nav-item.active{background:var(--panel-raised);color:var(--text);border-color:var(--line);}
+.nav-item svg{flex-shrink:0;opacity:.85;}
+.nav-item.active svg{opacity:1;}
+
+.sidebar-foot{margin-top:auto;padding-top:12px;border-top:1px solid var(--line-soft);}
+.role-pill{
+  display:flex;align-items:center;justify-content:space-between;gap:6px;
+  padding:8px 10px;border-radius:var(--radius-sm);
+  background:var(--panel);border:1px solid var(--line);
+  cursor:pointer;font-size:12.5px;
+}
+.role-pill:hover{border-color:#3A4656;}
+
+/* ============ MAIN ============ */
+.main{display:flex;flex-direction:column;min-height:100vh;min-width:0;}
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 22px;border-bottom:1px solid var(--line-soft);
+  background:rgba(13,17,23,.85);backdrop-filter:blur(6px);
+  position:sticky;top:0;z-index:20;
+}
+.topbar-left{display:flex;align-items:center;gap:16px;}
+.status-chip{
+  display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-dim);
+  padding:5px 10px;border:1px solid var(--line);border-radius:20px;background:var(--panel);
+}
+.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.dot.on{background:var(--go);box-shadow:0 0 0 3px var(--go-dim);}
+.dot.warn{background:var(--warn);box-shadow:0 0 0 3px var(--warn-dim);}
+.dot.off{background:var(--stop);box-shadow:0 0 0 3px var(--stop-dim);}
+.dot.pulse{animation:pulse 1.4s infinite;}
+@keyframes pulse{0%{opacity:1;}50%{opacity:.35;}100%{opacity:1;}}
+.clock{font-family:var(--mono);font-size:13px;color:var(--text-dim);}
+.topbar-right{display:flex;align-items:center;gap:10px;}
+
+.page{padding:22px;flex:1;min-width:0;}
+.page-head{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px;}
+.page-title{font-size:21px;}
+.page-sub{color:var(--text-dim);font-size:13px;margin-top:3px;}
+
+/* ============ PANEL / GRID ============ */
+.panel{
+  background:var(--panel);border:1px solid var(--line-soft);border-radius:var(--radius);
+  padding:16px;
+}
+.panel-title{font-size:12.5px;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;}
+.grid{display:grid;gap:14px;}
+.grid-4{grid-template-columns:repeat(4,1fr);}
+.grid-3{grid-template-columns:repeat(3,1fr);}
+.grid-2{grid-template-columns:repeat(2,1fr);}
+@media(max-width:1100px){.grid-4{grid-template-columns:repeat(2,1fr);}.grid-3{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:680px){.grid-4,.grid-3,.grid-2{grid-template-columns:1fr;}}
+
+.metric{background:var(--panel);border:1px solid var(--line-soft);border-radius:var(--radius);padding:14px 16px;}
+.metric-label{font-size:11.5px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.06em;font-weight:600;}
+.metric-value{font-family:var(--disp);font-size:26px;margin-top:6px;}
+.metric-value.small{font-size:20px;}
+.metric-delta{font-size:11.5px;margin-top:4px;color:var(--text-dim);}
+.metric-delta.pos{color:var(--go);}
+.metric-delta.neg{color:var(--stop);}
+
+/* ============ BUTTONS / INPUTS ============ */
+.btn{
+  display:inline-flex;align-items:center;gap:7px;justify-content:center;
+  padding:8px 14px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;
+  border:1px solid var(--line);background:var(--panel-raised);color:var(--text);
+  cursor:pointer;transition:filter .1s, transform .05s;white-space:nowrap;
+}
+.btn:hover{filter:brightness(1.15);}
+.btn:active{transform:scale(.98);}
+.btn:disabled{opacity:.4;cursor:not-allowed;}
+.btn-primary{background:var(--go);border-color:var(--go);color:#04241a;}
+.btn-danger{background:var(--stop);border-color:var(--stop);color:#2a0b06;}
+.btn-ghost{background:transparent;}
+.btn-sm{padding:5px 10px;font-size:12px;}
+.btn-block{width:100%;}
+
+.input, select.input, textarea.input{
+  width:100%;background:#0F151C;border:1px solid var(--line);color:var(--text);
+  padding:8px 10px;border-radius:var(--radius-sm);font-size:13px;font-family:inherit;
+}
+.input:focus, select.input:focus, textarea.input:focus{outline:none;border-color:var(--scan);}
+label.field-label{font-size:11.5px;color:var(--text-dim);font-weight:600;display:block;margin-bottom:5px;}
+.field{margin-bottom:12px;}
+
+/* ============ TABLE ============ */
+table.data{width:100%;border-collapse:collapse;font-size:13px;}
+table.data th{
+  text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em;
+  color:var(--text-faint);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--line-soft);
+}
+table.data td{padding:9px 10px;border-bottom:1px solid var(--line-soft);color:var(--text);}
+table.data tr:last-child td{border-bottom:none;}
+table.data tbody tr:hover{background:#161D26;}
+.plate{font-family:var(--mono);font-weight:600;letter-spacing:.03em;background:#0F151C;border:1px solid var(--line);padding:2px 7px;border-radius:4px;font-size:12.5px;}
+
+/* ============ PILLS / BADGES ============ */
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;letter-spacing:.04em;padding:3px 9px;border-radius:20px;text-transform:uppercase;}
+.pill-go{background:var(--go-dim);color:var(--go);}
+.pill-stop{background:var(--stop-dim);color:var(--stop);}
+.pill-warn{background:var(--warn-dim);color:var(--warn);}
+.pill-info{background:var(--scan-dim);color:var(--scan);}
+.pill-mute{background:#232B35;color:var(--text-dim);}
+
+/* ============ LANE / SIMULATOR ============ */
+.lane-wrap{border:1px solid var(--line-soft);border-radius:var(--radius);background:var(--panel);padding:16px;}
+.lane-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.lane-track{position:relative;height:64px;background:#0A0F15;border:1px dashed var(--line);border-radius:var(--radius);margin-bottom:14px;overflow:hidden;}
+.lane-steps{position:absolute;inset:0;display:flex;align-items:center;justify-content:space-between;padding:0 22px;}
+.lane-step{display:flex;flex-direction:column;align-items:center;gap:5px;font-size:10.5px;color:var(--text-faint);width:70px;text-align:center;z-index:2;}
+.lane-step .node{width:11px;height:11px;border-radius:50%;background:#232B35;border:2px solid #313D4B;}
+.lane-step.active .node{background:var(--scan);border-color:var(--scan);box-shadow:0 0 0 4px var(--scan-dim);}
+.lane-step.done .node{background:var(--go);border-color:var(--go);}
+.lane-step.active, .lane-step.done{color:var(--text);}
+.lane-progress{position:absolute;top:50%;left:22px;right:22px;height:2px;background:var(--line);transform:translateY(-1px);z-index:1;}
+.lane-progress-fill{position:absolute;top:0;left:0;height:100%;background:var(--go);transition:width .5s ease;}
+.lane-car{position:absolute;top:8px;font-size:20px;transition:left .5s ease;z-index:3;}
+.lane-result{border-top:1px solid var(--line-soft);padding-top:12px;margin-top:4px;min-height:46px;}
+
+.result-card{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:var(--radius-sm);border:1px solid var(--line);}
+.result-card.go{background:var(--go-dim);border-color:#1F5A47;}
+.result-card.stop{background:var(--stop-dim);border-color:#5A2A20;}
+.result-card.warn{background:var(--warn-dim);border-color:#5B4715;}
+.result-card.info{background:var(--scan-dim);border-color:#1F4568;}
+
+/* ============ FEED ============ */
+.feed{display:flex;flex-direction:column-reverse;gap:0;max-height:520px;overflow-y:auto;}
+.feed-item{display:flex;gap:10px;padding:9px 2px;border-bottom:1px solid var(--line-soft);font-size:12.5px;align-items:flex-start;}
+.feed-time{font-family:var(--mono);color:var(--text-faint);font-size:11px;flex-shrink:0;padding-top:1px;width:64px;}
+.feed-dot{width:7px;height:7px;border-radius:50%;margin-top:5px;flex-shrink:0;}
+
+/* ============ BANNER ============ */
+.emg-banner{
+  background:linear-gradient(90deg,#3B0F0A,#4A140D);
+  border-bottom:1px solid var(--stop);
+  color:#FFD9CF;padding:10px 22px;display:flex;align-items:center;justify-content:space-between;gap:14px;
+  position:sticky;top:0;z-index:30;
+}
+.emg-banner strong{color:#fff;}
+
+/* ============ MISC ============ */
+.hr{height:1px;background:var(--line-soft);border:none;margin:14px 0;}
+.muted{color:var(--text-dim);}
+.faint{color:var(--text-faint);}
+.flex{display:flex;}
+.flex-between{display:flex;align-items:center;justify-content:space-between;}
+.gap-8{gap:8px;}
+.gap-10{gap:10px;}
+.wrap{flex-wrap:wrap;}
+.bar-track{height:8px;border-radius:5px;background:#0F151C;border:1px solid var(--line);overflow:hidden;}
+.bar-fill{height:100%;border-radius:5px;}
+.chip{padding:8px 11px;border-radius:var(--radius-sm);border:1px solid var(--line);background:var(--panel-raised);cursor:pointer;font-size:12.5px;}
+.chip:hover{border-color:var(--scan);}
+.modal-back{position:fixed;inset:0;background:rgba(5,7,10,.6);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px;}
+.modal{background:var(--panel-raised);border:1px solid var(--line);border-radius:var(--radius);padding:20px;width:100%;max-width:460px;max-height:86vh;overflow-y:auto;}
+.floating-sim{position:fixed;bottom:20px;right:20px;z-index:60;}
+.sim-drawer{
+  position:fixed;bottom:74px;right:20px;width:290px;background:var(--panel-raised);
+  border:1px solid var(--line);border-radius:var(--radius);padding:14px;z-index:60;
+  box-shadow:0 10px 40px rgba(0,0,0,.4);
+}
+.callout{border:1px solid var(--line);border-left:3px solid var(--scan);background:var(--panel);padding:10px 12px;border-radius:var(--radius-sm);font-size:12.5px;color:var(--text-dim);}
+.callout.warn{border-left-color:var(--warn);}
+.callout.danger{border-left-color:var(--stop);}
+.section-title{font-size:15px;margin-bottom:10px;}
+.legend-row{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text-dim);}
+.access-x{color:var(--stop);}
+.access-ok{color:var(--go);}
+code.code{font-family:var(--mono);font-size:12px;background:#0F151C;border:1px solid var(--line);padding:1px 6px;border-radius:4px;}
+pre.code-block{font-family:var(--mono);font-size:12px;background:#0A0F15;border:1px solid var(--line-soft);border-radius:var(--radius-sm);padding:12px;overflow-x:auto;line-height:1.7;}
+
+@media(max-width:840px){
+  .shell{grid-template-columns:1fr;}
+  .sidebar{position:fixed;bottom:0;left:0;right:0;top:auto;height:auto;flex-direction:row;
+    overflow-x:auto;border-right:none;border-top:1px solid var(--line-soft);z-index:40;padding:8px;}
+  .brand,.nav-group-label,.sidebar-foot{display:none;}
+  .nav-item{flex-direction:column;font-size:9.5px;gap:3px;padding:6px 9px;flex-shrink:0;}
+  .main{padding-bottom:70px;}
+  .page{padding:16px;}
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" data-presets="react">
+const {useState, useEffect, useMemo, useRef, useCallback} = React;
+
+/* ============================================================
+   ICONS — small hand-drawn stroke icons, no external icon set
+   ============================================================ */
+function Icon({name, size=16, color="currentColor"}) {
+  const p = {width:size, height:size, viewBox:"0 0 24 24", fill:"none", stroke:color, strokeWidth:"1.8", strokeLinecap:"round", strokeLinejoin:"round"};
+  switch(name){
+    case "grid": return <svg {...p}><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>;
+    case "car": return <svg {...p}><path d="M3 13l1.6-4.8A2 2 0 0 1 6.5 7h11a2 2 0 0 1 1.9 1.2L21 13"/><rect x="2.5" y="13" width="19" height="6" rx="1.6"/><circle cx="7" cy="19.5" r="1.4"/><circle cx="17" cy="19.5" r="1.4"/></svg>;
+    case "layers": return <svg {...p}><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></svg>;
+    case "wallet": return <svg {...p}><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/><circle cx="16.5" cy="14.5" r="1"/></svg>;
+    case "shield": return <svg {...p}><path d="M12 3l7 3v6c0 4.4-3 7.6-7 9-4-1.4-7-4.6-7-9V6l7-3z"/></svg>;
+    case "siren": return <svg {...p}><path d="M12 3a6 6 0 0 1 6 6v6H6V9a6 6 0 0 1 6-6z"/><path d="M3 15h18v3H3z"/><path d="M12 1v1.4"/></svg>;
+    case "user": return <svg {...p}><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg>;
+    case "clipboard": return <svg {...p}><rect x="5" y="4" width="14" height="17" rx="2"/><rect x="9" y="2.3" width="6" height="3.4" rx="1"/><path d="M8.5 11h7M8.5 15h7"/></svg>;
+    case "activity": return <svg {...p}><path d="M3 12h4l2.2-7 4 14L15.5 12H21"/></svg>;
+    case "settings": return <svg {...p}><circle cx="12" cy="12" r="3"/><path d="M19.4 13.5a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5v.2a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1h-.2a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3h0a1.7 1.7 0 0 0 1-1.5v-.2a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5h0a1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9v0a1.7 1.7 0 0 0 1.5 1h.2a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>;
+    case "file": return <svg {...p}><path d="M6 2h9l5 5v15H6z"/><path d="M15 2v5h5"/></svg>;
+    case "server": return <svg {...p}><rect x="3" y="4" width="18" height="6" rx="1.6"/><rect x="3" y="14" width="18" height="6" rx="1.6"/><circle cx="7" cy="7" r=".6" fill={color}/><circle cx="7" cy="17" r=".6" fill={color}/></svg>;
+    case "chart": return <svg {...p}><path d="M4 20V10M11 20V4M18 20v-7"/><path d="M2 20h20"/></svg>;
+    case "bolt": return <svg {...p}><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/></svg>;
+    case "bell": return <svg {...p}><path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6z"/><path d="M9.5 19a2.5 2.5 0 0 0 5 0"/></svg>;
+    case "check": return <svg {...p}><path d="M5 13l4.5 4.5L19 8"/></svg>;
+    case "x": return <svg {...p}><path d="M6 6l12 12M18 6L6 18"/></svg>;
+    case "alert": return <svg {...p}><path d="M12 3 2 20h20L12 3z"/><path d="M12 10v4"/><circle cx="12" cy="17" r=".6" fill={color}/></svg>;
+    case "clock": return <svg {...p}><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>;
+    case "map": return <svg {...p}><path d="M9 4 3 6.5v13L9 17l6 3 6-2.5v-13L15 7 9 4z"/><path d="M9 4v13M15 7v13"/></svg>;
+    case "gate": return <svg {...p}><path d="M4 20V6a1 1 0 0 1 1-1h1v15"/><path d="M18 20V6a1 1 0 0 0-1-1h-1v15"/><rect x="5" y="9" width="14" height="3" rx="1"/><path d="M2 20h20"/></svg>;
+    case "eye": return <svg {...p}><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>;
+    case "download": return <svg {...p}><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M4 19h16"/></svg>;
+    case "plus": return <svg {...p}><path d="M12 5v14M5 12h14"/></svg>;
+    case "trash": return <svg {...p}><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/></svg>;
+    case "chevron": return <svg {...p}><path d="M7 5l7 7-7 7"/></svg>;
+    case "power": return <svg {...p}><path d="M12 3v8"/><path d="M6.5 6.5a8 8 0 1 0 11 0"/></svg>;
+    case "phone": return <svg {...p}><path d="M5 4h4l1.5 5-2.5 1.5a12 12 0 0 0 5.5 5.5l1.5-2.5 5 1.5v4a2 2 0 0 1-2.2 2A18 18 0 0 1 3 5.2 2 2 0 0 1 5 4z"/></svg>;
+    case "book": return <svg {...p}><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v17H6.5A2.5 2.5 0 0 0 4 21.5v-17z"/><path d="M4 19a2.5 2.5 0 0 1 2.5-2.5H20"/></svg>;
+    case "cpu": return <svg {...p}><rect x="7" y="7" width="10" height="10" rx="1.5"/><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v2M15 3v2M9 19v2M15 19v2M3 9h2M3 15h2M19 9h2M19 15h2"/></svg>;
+    case "logout": return <svg {...p}><path d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3"/><path d="M15 16l4-4-4-4"/><path d="M19 12H9"/></svg>;
+    default: return null;
+  }
+}
+
+/* ============================================================
+   HELPERS
+   ============================================================ */
+const KES = n => "KES " + Math.round(n).toLocaleString();
+const uid = (p="id") => p + "_" + Math.random().toString(36).slice(2,9);
+
+function fmtClock(d){
+  return d.toLocaleTimeString('en-GB', {hour12:false});
+}
+function fmtDateShort(d){
+  return d.toLocaleDateString('en-GB', {day:'2-digit', month:'short', year:'numeric'});
+}
+function fmtDuration(ms){
+  const mins = Math.max(0, Math.round(ms/60000));
+  const h = Math.floor(mins/60), m = mins%60;
+  return h>0 ? `${h}h ${m}m` : `${m}m`;
+}
+function daysUntil(date){
+  return Math.ceil((date.getTime()-Date.now())/86400000);
+}
+function subStatus(expiresAt, suspended, cancelled){
+  if (cancelled) return "CANCELLED";
+  if (suspended) return "SUSPENDED";
+  const d = daysUntil(expiresAt);
+  if (d < 0) return "EXPIRED";
+  if (d <= 4) return "EXPIRING SOON";
+  return "ACTIVE";
+}
+function pillClassForSub(s){
+  return {ACTIVE:"pill-go","EXPIRING SOON":"pill-warn",EXPIRED:"pill-stop",SUSPENDED:"pill-mute",CANCELLED:"pill-mute"}[s] || "pill-mute";
+}
+function download(filename, text){
+  const blob = new Blob([text], {type:"text/plain"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+}
+
+/* ---- billing engine ---- */
+const DEFAULT_RATES = {
+  gracePeriodMinutes: 5,
+  maxDaily: 600,
+  weekendMultiplier: 1.1,
+  lostTicketFee: 800,
+  vehicleMultiplier: {motorcycle:0.5, car:1, suv:1.25, truck:1.75, vip:1.5},
+  brackets: [
+    {label:"0–30 min", maxMinutes:30, fee:0},
+    {label:"30–60 min", maxMinutes:60, fee:50},
+    {label:"1–2 hrs", maxMinutes:120, fee:100},
+    {label:"2–4 hrs", maxMinutes:240, fee:180},
+    {label:"4–8 hrs", maxMinutes:480, fee:320},
+    {label:"8–24 hrs", maxMinutes:1440, fee:500},
+  ]
+};
+function calcFee(minutes, vehicleType, rates){
+  if (minutes <= rates.gracePeriodMinutes) return 0;
+  const isWeekend = [0,6].includes(new Date().getDay());
+  const mult = (rates.vehicleMultiplier[vehicleType] ?? 1) * (isWeekend ? rates.weekendMultiplier : 1);
+  let bracket = rates.brackets.find(b => minutes <= b.maxMinutes);
+  let base;
+  if (bracket) base = bracket.fee;
+  else base = rates.maxDaily * Math.ceil(minutes/1440);
+  const days = Math.max(1, Math.ceil(minutes/1440));
+  return Math.min(Math.round(base*mult), rates.maxDaily*days);
+}
+
+/* ---- payment simulation ---- */
+function simulatePayment(method, health){
+  if (method === "mpesa"){
+    if (health.mpesa === "offline") return {status:"failed", reason:"M-Pesa API unreachable"};
+    if (health.mpesa === "warning" && Math.random() < 0.55) return {status:"timeout", reason:"STK push delayed — network degraded"};
+  }
+  if (method === "card" && Math.random() < 0.08) return {status:"failed", reason:"Card declined by issuer"};
+  if (method === "mpesa" && Math.random() < 0.07) return {status:"timeout", reason:"Customer did not enter PIN in time"};
+  return {status:"success"};
+}
+
+/* ============================================================
+   SEED DATA
+   ============================================================ */
+const now0 = Date.now();
+const CUSTOMERS = [
+  {id:"c1", name:"Jane Wanjiru", phone:"+254 712 345 678", email:"jane.wanjiru@example.com"},
+  {id:"c2", name:"Peter Otieno", phone:"+254 798 765 432", email:"peter.otieno@example.com"},
+  {id:"c3", name:"Amina Hassan", phone:"+254 701 122 334", email:"amina.hassan@example.com"},
+];
+const VEHICLES = [
+  {id:"v1", plate:"KDA 123A", make:"Toyota", model:"Prado", color:"White", type:"suv", ownerId:"c1"},
+  {id:"v2", plate:"KCB 456B", make:"Toyota", model:"Corolla", color:"Silver", type:"car", ownerId:"c1"},
+  {id:"v3", plate:"KCX 789C", make:"Subaru", model:"Forester", color:"Blue", type:"suv", ownerId:"c1"},
+  {id:"v4", plate:"KDE 882C", make:"Honda", model:"Fit", color:"Red", type:"car", ownerId:"c2"},
+  {id:"v5", plate:"KDF 220D", make:"Isuzu", model:"D-Max", color:"Black", type:"truck", ownerId:"c3"},
+  {id:"v6", plate:"KMDC 44Q", make:"Bajaj", model:"Boxer", color:"Black", type:"motorcycle", ownerId:"c3"},
+];
+const INITIAL_SUBS = [
+  {id:"s1", vehicleId:"v1", stickerId:"STK-10231", plan:"Monthly — SUV", expiresAt: new Date(now0 + 2*86400000), suspended:false, cancelled:false, autoRenew:true},
+  {id:"s2", vehicleId:"v3", stickerId:"STK-10245", plan:"Monthly — SUV", expiresAt: new Date(now0 - 3*86400000), suspended:false, cancelled:false, autoRenew:false},
+  {id:"s3", vehicleId:"v2", stickerId:"STK-10390", plan:"Monthly — Sedan", expiresAt: new Date(now0 + 21*86400000), suspended:false, cancelled:false, autoRenew:true},
+];
+const ZONES = [
+  {id:"z1", floor:"Level B1", name:"Zone A", total:100, occupied:82},
+  {id:"z2", floor:"Level B1", name:"Zone B", total:100, occupied:64},
+  {id:"z3", floor:"Level B1", name:"Zone C", total:100, occupied:41},
+  {id:"z4", floor:"Level B2", name:"Zone D", total:100, occupied:75},
+  {id:"z5", floor:"Level B2", name:"Zone E", total:100, occupied:80},
+];
+const SPECIAL_SPACES = {ev:14, disabled:10, vip:8};
+const EMPLOYEES = [
+  {id:"e1", name:"Grace Achieng", role:"manager", email:"grace.a@kito.app"},
+  {id:"e2", name:"Brian Kiptoo", role:"attendant", email:"brian.k@kito.app"},
+  {id:"e3", name:"Fatuma Ali", role:"security", email:"fatuma.a@kito.app"},
+  {id:"e4", name:"Samuel Mwangi", role:"finance", email:"samuel.m@kito.app"},
+];
+const OTHER_FACILITIES = [
+  {name:"Nairobi Mall", spaces:820, occupancy:0.71, revenueToday:184200},
+  {name:"Mombasa Office Park", spaces:340, occupancy:0.44, revenueToday:61300},
+  {name:"Eldoret Hospital", spaces:260, occupancy:0.88, revenueToday:52800},
+];
+
+function seedSessions(){
+  const list = [];
+  const t = now0;
+  const hist = [
+    {plate:"KCB 456B", vehicleId:"v2", type:"car", start: t-4*3600000, end: t-3*3600000-40*60000, method:"mpesa"},
+    {plate:"KDE 882C", vehicleId:"v4", type:"car", start: t-6*3600000, end: t-5*3600000, method:"card"},
+    {plate:"KDF 220D", vehicleId:"v5", type:"truck", start: t-7*3600000, end: t-6*3600000-10*60000, method:"cash"},
+    {plate:"KMDC 44Q", vehicleId:"v6", type:"motorcycle", start: t-5*3600000, end: t-4*3600000-50*60000, method:"mpesa"},
+    {plate:"KDD 771F", vehicleId:null, type:"car", start: t-8*3600000, end: t-7*3600000-20*60000, method:"card"},
+  ];
+  hist.forEach((h,i)=>{
+    const minutes = Math.round((h.end-h.start)/60000);
+    const fee = calcFee(minutes, h.type, DEFAULT_RATES);
+    list.push({
+      id: uid("sess"), plate:h.plate, vehicleId:h.vehicleId, type:h.type,
+      entry:new Date(h.start), exit:new Date(h.end), status:"COMPLETED",
+      fee, method:h.method, paymentStatus:"PAID", reference:"PARK-"+ (20260900+i),
+      subscriptionUsed:false,
+    });
+  });
+  // currently parked
+  list.push({id: uid("sess"), plate:"KDA 123A", vehicleId:"v1", type:"suv", entry:new Date(t-95*60000), exit:null, status:"PARKED", fee:null, method:null, paymentStatus:"N/A (subscription)", reference:null, subscriptionUsed:true});
+  list.push({id: uid("sess"), plate:"KCX 789C", vehicleId:"v3", type:"suv", entry:new Date(t-40*60000), exit:null, status:"PARKED", fee:null, method:null, paymentStatus:"UNPAID", reference:null, subscriptionUsed:false});
+  return list;
+}
+
+/* ============================================================
+   SMALL UI PRIMITIVES
+   ============================================================ */
+function Metric({label, value, delta, deltaType}){
+  return (
+    <div className="metric">
+      <div className="metric-label">{label}</div>
+      <div className="metric-value">{value}</div>
+      {delta && <div className={"metric-delta " + (deltaType||"")}>{delta}</div>}
+    </div>
+  );
+}
+function Pill({children, cls}){ return <span className={"pill " + (cls||"pill-mute")}>{children}</span>; }
+function HealthDot({status}){
+  const cls = status==="online" ? "on" : status==="warning" ? "warn" : "off";
+  return <span className={"dot " + cls + (status==="warning"?" pulse":"")}></span>;
+}
+function Bar({pct, color}){
+  return <div className="bar-track"><div className="bar-fill" style={{width:Math.min(100,pct)+"%", background:color||"var(--go)"}}></div></div>;
+}
+function Modal({title, onClose, children, width}){
+  return (
+    <div className="modal-back" onMouseDown={(e)=>{ if(e.target===e.currentTarget) onClose(); }}>
+      <div className="modal" style={width?{maxWidth:width}:{}}>
+        <div className="flex-between" style={{marginBottom:14}}>
+          <h3>{title}</h3>
+          <span className="chip" style={{padding:"4px 8px"}} onClick={onClose}><Icon name="x" size={14}/></span>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+const ROLES = [
+  {id:"owner", label:"Owner / Super Admin", icon:"shield"},
+  {id:"manager", label:"Parking Manager", icon:"clipboard"},
+  {id:"attendant", label:"Parking Attendant", icon:"gate"},
+  {id:"security", label:"Security Officer", icon:"siren"},
+  {id:"finance", label:"Finance / Accountant", icon:"wallet"},
+  {id:"customer", label:"Customer", icon:"user"},
+];
+
+const NAV = [
+  {id:"console", label:"Live console", icon:"activity", roles:["owner","manager","attendant"]},
+  {id:"occupancy", label:"Occupancy & zones", icon:"layers", roles:["owner","manager","attendant","security"]},
+  {id:"rates", label:"Billing & rates", icon:"wallet", roles:["owner"]},
+  {id:"subscriptions", label:"Subscriptions", icon:"clipboard", roles:["owner","manager","customer"]},
+  {id:"finance", label:"Payments & finance", icon:"chart", roles:["owner","finance"]},
+  {id:"security", label:"Security & watchlist", icon:"eye", roles:["owner","security"]},
+  {id:"emergency", label:"Emergency center", icon:"siren", roles:["owner","manager","security"]},
+  {id:"customer", label:"My parking", icon:"car", roles:["customer"]},
+  {id:"analytics", label:"Analytics", icon:"chart", roles:["owner","finance","manager"]},
+  {id:"audit", label:"Audit log", icon:"file", roles:["owner","security"]},
+  {id:"health", label:"System health", icon:"server", roles:["owner","manager"]},
+  {id:"platform", label:"Multi-facility", icon:"grid", roles:["owner"]},
+  {id:"employees", label:"Employees & roles", icon:"user", roles:["owner"]},
+  {id:"docs", label:"API & data model", icon:"book", roles:["owner"]},
+];
+
+/* ============================================================
+   ROOT APP
+   ============================================================ */
+function App(){
+  const [role, setRole] = useState("owner");
+  const [page, setPage] = useState("console");
+  const [now, setNow] = useState(new Date());
+  const [showRoleMenu, setShowRoleMenu] = useState(false);
+  const [showSim, setShowSim] = useState(false);
+
+  const [sessions, setSessions] = useState(seedSessions);
+  const [subs, setSubs] = useState(INITIAL_SUBS);
+  const [zones, setZones] = useState(ZONES);
+  const [rates, setRates] = useState(DEFAULT_RATES);
+  const [blacklist, setBlacklist] = useState([
+    {id:uid("bl"), plate:"KXX 000Z", status:"Stolen", reason:"Reported stolen — OB/4521/2026", addedAt:new Date(now0-2*86400000)}
+  ]);
+  const [health, setHealth] = useState({
+    anpr:"online", barriers:"online", paymentGateway:"online", mpesa:"online",
+    database:"online", internet:"online", sensors:"online", fireSystem:"online", notifications:"online"
+  });
+  const [systemStatus, setSystemStatus] = useState("ONLINE"); // ONLINE | DEGRADED | OFFLINE
+  const [emergency, setEmergency] = useState({active:false, category:null, message:"", activatedAt:null, assemblyPoint:"Assembly Point A — North Car Park Exit"});
+  const [audit, setAudit] = useState([
+    {id:uid("aud"), user:"System", action:"Facility initialized", detail:"Kisumu Mall configured with 500 spaces across 5 zones", ts:new Date(now0-5*86400000)},
+  ]);
+  const [feed, setFeed] = useState([
+    {id:uid("f"), ts:new Date(now0-30*60000), kind:"info", text:"Shift handover completed — Attendant Brian Kiptoo on duty"},
+  ]);
+  const [notifications, setNotifications] = useState([]);
+  const [processedRefs, setProcessedRefs] = useState({}); // idempotency store
+  const [customerId, setCustomerId] = useState("c1");
+  const [entryLane, setEntryLane] = useState({step:"idle", data:null});
+  const [exitLane, setExitLane] = useState({step:"idle", data:null});
+
+  useEffect(()=>{ const t = setInterval(()=>setNow(new Date()), 1000); return ()=>clearInterval(t); },[]);
+
+  function logAudit(action, detail){
+    setAudit(a => [{id:uid("aud"), user: ROLES.find(r=>r.id===role)?.label || role, action, detail, ts:new Date()}, ...a]);
+  }
+  function pushFeed(kind, text){
+    setFeed(f => [...f.slice(-60), {id:uid("f"), ts:new Date(), kind, text}]);
+  }
+  function notify(channelText){
+    setNotifications(n => [{id:uid("n"), ts:new Date(), text:channelText}, ...n]);
+  }
+
+  const totalSpaces = zones.reduce((s,z)=>s+z.total,0);
+  const occupiedSpaces = zones.reduce((s,z)=>s+z.occupied,0);
+  const availableSpaces = totalSpaces - occupiedSpaces;
+  const occPct = Math.round((occupiedSpaces/totalSpaces)*100);
+
+  const parkedSessions = sessions.filter(s=>s.status==="PARKED");
+  const completedToday = sessions.filter(s=>s.status==="COMPLETED");
+  const revenueToday = completedToday.reduce((s,x)=>s + (x.fee||0), 0);
+  const failedPaymentsCount = feed.filter(f=>f.kind==="alert" && f.text.toLowerCase().includes("payment failed")).length;
+  const securityAlertsCount = feed.filter(f=>f.kind==="security").length;
+  const activeSubsCount = subs.filter(s=>subStatus(s.expiresAt,s.suspended,s.cancelled)==="ACTIVE" || subStatus(s.expiresAt,s.suspended,s.cancelled)==="EXPIRING SOON").length;
+
+  function findVehicle(id){ return VEHICLES.find(v=>v.id===id); }
+  function findCustomer(id){ return CUSTOMERS.find(c=>c.id===id); }
+  function subForVehicle(vid){ return subs.find(s=>s.vehicleId===vid); }
+
+  /* ---------------- ENTRY SIMULATION ---------------- */
+  function simulateEntry(vehicleIdOrUnknown){
+    if (emergency.active){
+      pushFeed("alert", "Entry attempt blocked — facility is in emergency mode");
+      return;
+    }
+    if (availableSpaces <= 0){
+      pushFeed("alert", "Entry blocked — facility at full capacity");
+      return;
+    }
+    let vehicle = null, plate;
+    if (vehicleIdOrUnknown === "unknown"){
+      plate = "K" + ["D","C","B"][Math.floor(Math.random()*3)] + "" + (100+Math.floor(Math.random()*899)) + String.fromCharCode(65+Math.floor(Math.random()*26));
+    } else {
+      vehicle = findVehicle(vehicleIdOrUnknown);
+      plate = vehicle ? vehicle.plate : vehicleIdOrUnknown; // literal plate string (e.g. a watchlist demo plate)
+    }
+    const flagged = blacklist.find(b => b.plate === plate);
+
+    setEntryLane({step:"scanning", data:{plate}});
+    setTimeout(()=>{
+      if (flagged){
+        setEntryLane({step:"result", data:{plate, decision:"security", flagged}});
+        pushFeed("security", `Watchlisted plate ${plate} detected at entry — flagged "${flagged.status}"`);
+        logAudit("Security alert raised", `Plate ${plate} matched watchlist (${flagged.status}) at entry lane`);
+        return;
+      }
+      const sub = vehicle ? subForVehicle(vehicle.id) : null;
+      const subStat = sub ? subStatus(sub.expiresAt, sub.suspended, sub.cancelled) : null;
+      const hasActiveSub = subStat === "ACTIVE" || subStat === "EXPIRING SOON";
+
+      const sessionId = uid("sess");
+      const newSession = {
+        id: sessionId, plate, vehicleId: vehicle?vehicle.id:null, type: vehicle?vehicle.type:"car",
+        entry: new Date(), exit:null, status:"PARKED", fee:null, method:null,
+        paymentStatus: hasActiveSub ? "N/A (subscription)" : "UNPAID", reference:null, subscriptionUsed: hasActiveSub,
+      };
+      setSessions(s => [...s, newSession]);
+      setZones(zs => bumpZone(zs, +1));
+
+      setEntryLane({step:"result", data:{plate, decision: hasActiveSub ? "subscription" : (vehicle ? "known" : "unknown"), vehicle, sub}});
+      pushFeed("entry", `${plate} entered — ${hasActiveSub ? "active subscription verified" : vehicle ? "pay-as-you-go session opened" : "unregistered vehicle, temporary session opened"}`);
+    }, 750);
+  }
+
+  function bumpZone(zs, delta){
+    // put the change into whichever zone has room, roughly round-robin
+    const copy = zs.map(z=>({...z}));
+    if (delta > 0){
+      const target = copy.find(z=>z.occupied < z.total) || copy[0];
+      target.occupied = Math.min(target.total, target.occupied+1);
+    } else {
+      const target = [...copy].reverse().find(z=>z.occupied>0) || copy[0];
+      target.occupied = Math.max(0, target.occupied-1);
+    }
+    return copy;
+  }
+
+  function resetEntryLane(){ setEntryLane({step:"idle", data:null}); }
+
+  /* ---------------- EXIT SIMULATION ---------------- */
+  function startExit(sessionId){
+    const session = sessions.find(s=>s.id===sessionId);
+    if (!session) return;
+    setExitLane({step:"calculating", data:{session}});
+    setTimeout(()=>{
+      const minutes = (Date.now() - session.entry.getTime())/60000;
+      const sub = session.vehicleId ? subForVehicle(session.vehicleId) : null;
+      const subStat = sub ? subStatus(sub.expiresAt, sub.suspended, sub.cancelled) : null;
+      const hasActiveSub = subStat === "ACTIVE" || subStat === "EXPIRING SOON";
+      const fee = hasActiveSub ? 0 : calcFee(minutes, session.type, rates);
+      setExitLane({step:"payment", data:{session, minutes, fee, hasActiveSub, method:null}});
+    }, 700);
+  }
+
+  function choosePaymentMethod(method){
+    setExitLane(el => ({...el, data:{...el.data, method, processing:true}}));
+    const {session, fee} = exitLane.data;
+    const reference = "PARK-" + Date.now().toString().slice(-9);
+    setTimeout(()=>{
+      if (systemStatus === "OFFLINE" && method !== "cash"){
+        setExitLane(el => ({...el, step:"result", data:{...el.data, outcome:{status:"queued"}, reference}}));
+        pushFeed("payment", `${session.plate} exit payment queued — offline mode, will sync when connectivity returns`);
+        return;
+      }
+      const outcome = simulatePayment(method, health);
+      setExitLane(el => ({...el, step:"result", data:{...el.data, outcome, reference}}));
+      if (outcome.status === "success"){
+        setProcessedRefs(r => ({...r, [reference]: {status:"success", plate:session.plate, fee}}));
+        pushFeed("payment", `${session.plate} exit payment of ${KES(fee)} via ${method.toUpperCase()} confirmed — barrier opening`);
+      } else if (outcome.status === "failed"){
+        pushFeed("alert", `Payment failed for ${session.plate} — ${outcome.reason}`);
+      } else if (outcome.status === "timeout"){
+        pushFeed("alert", `Payment timed out for ${session.plate} — ${outcome.reason}`);
+      }
+    }, 900);
+  }
+
+  function completeExit(){
+    const {session, fee, method, outcome, reference} = exitLane.data;
+    setSessions(ss => ss.map(s => s.id===session.id ? {
+      ...s, status:"COMPLETED", exit:new Date(), fee: fee, method,
+      paymentStatus: outcome.status==="queued" ? "QUEUED (offline)" : "PAID", reference
+    } : s));
+    setZones(zs => bumpZone(zs, -1));
+    pushFeed("exit", `${session.plate} exited — barrier opened, session closed`);
+    setExitLane({step:"idle", data:null});
+  }
+
+  function retryPayment(newMethod){
+    choosePaymentMethod(newMethod || exitLane.data.method);
+  }
+
+  function replayWebhook(){
+    const {reference, session, fee} = exitLane.data;
+    const existing = processedRefs[reference];
+    if (existing){
+      pushFeed("info", `Duplicate payment callback for ${reference} ignored — existing status "${existing.status}" returned, no second charge created`);
+    }
+  }
+
+  /* ---------------- SUBSCRIPTIONS ---------------- */
+  function renewSub(subId){
+    setSubs(ss => ss.map(s => s.id===subId ? {...s, expiresAt: new Date(Math.max(Date.now(), s.expiresAt.getTime()) + 30*86400000), suspended:false, cancelled:false} : s));
+    const sub = subs.find(s=>s.id===subId);
+    const veh = sub ? findVehicle(sub.vehicleId) : null;
+    pushFeed("payment", `Subscription ${sub?.stickerId} renewed for ${veh?.plate} (+30 days)`);
+    logAudit("Subscription renewed", `${sub?.stickerId} renewed for ${veh?.plate}`);
+  }
+  function toggleSuspend(subId){
+    setSubs(ss => ss.map(s => s.id===subId ? {...s, suspended: !s.suspended} : s));
+    logAudit("Subscription updated", `Suspension toggled for subscription ${subId}`);
+  }
+  function cancelSub(subId){
+    setSubs(ss => ss.map(s => s.id===subId ? {...s, cancelled:true} : s));
+    logAudit("Subscription cancelled", `Subscription ${subId} cancelled`);
+  }
+  function buyNewSub(vehicleId, plan){
+    const veh = findVehicle(vehicleId);
+    const s = {id:uid("sub"), vehicleId, stickerId:"STK-"+Math.floor(10000+Math.random()*89999), plan, expiresAt:new Date(Date.now()+30*86400000), suspended:false, cancelled:false, autoRenew:true};
+    setSubs(ss => [...ss, s]);
+    pushFeed("payment", `New subscription purchased for ${veh?.plate} — sticker ${s.stickerId} issued`);
+    logAudit("Subscription created", `New ${plan} sticker issued for ${veh?.plate}`);
+  }
+
+  /* ---------------- RATES ---------------- */
+  function updateBracketFee(idx, value){
+    setRates(r => {
+      const brackets = r.brackets.map((b,i)=> i===idx ? {...b, fee:Number(value)} : b);
+      return {...r, brackets};
+    });
+  }
+  function saveRates(oldRates){
+    logAudit("Parking rates updated", `Rate table saved — grace period ${rates.gracePeriodMinutes}m, max daily ${KES(rates.maxDaily)}`);
+    pushFeed("info", "Parking rate configuration updated by admin");
+  }
+
+  /* ---------------- SECURITY ---------------- */
+  function addBlacklist(plate, status, reason){
+    setBlacklist(b => [...b, {id:uid("bl"), plate, status, reason, addedAt:new Date()}]);
+    logAudit("Vehicle flagged", `${plate} added to watchlist as "${status}" — ${reason}`);
+    pushFeed("security", `${plate} added to watchlist (${status})`);
+  }
+  function removeBlacklist(id){
+    const item = blacklist.find(b=>b.id===id);
+    setBlacklist(b => b.filter(x=>x.id!==id));
+    logAudit("Vehicle unflagged", `${item?.plate} removed from watchlist`);
+  }
+
+  /* ---------------- EMERGENCY ---------------- */
+  function activateEmergency(category, message){
+    setEmergency({active:true, category, message, activatedAt:new Date(), assemblyPoint: emergency.assemblyPoint});
+    logAudit("EMERGENCY ACTIVATED", `Category: ${category}. ${message||""}`);
+    pushFeed("security", `EMERGENCY MODE ACTIVATED — ${category}`);
+  }
+  function deactivateEmergency(){
+    setEmergency(e => ({...e, active:false, category:null}));
+    logAudit("Emergency deactivated", "All-clear declared, normal operations resumed");
+    pushFeed("info", "Emergency mode deactivated — normal operations resumed");
+  }
+  function broadcast(channels, text){
+    channels.forEach(c => notify(`[${c.toUpperCase()}] ${text}`));
+    logAudit("Emergency broadcast sent", `Channels: ${channels.join(", ")} — "${text}"`);
+    pushFeed("security", `Broadcast sent via ${channels.join(", ")}`);
+  }
+
+  /* ---------------- HEALTH / DEMO SCENARIOS ---------------- */
+  function setComponentHealth(key, status){
+    setHealth(h => ({...h, [key]:status}));
+    logAudit("System health changed", `${key} set to ${status.toUpperCase()} (simulated)`);
+    pushFeed(status==="online"?"info":"alert", `${key} status changed to ${status.toUpperCase()}`);
+  }
+  function toggleConnectivity(){
+    setSystemStatus(s => s==="ONLINE" ? "OFFLINE" : "ONLINE");
+    pushFeed("alert", systemStatus==="ONLINE" ? "Internet connectivity lost — switching to degraded local mode" : "Connectivity restored — syncing queued transactions");
+    logAudit("Connectivity changed", systemStatus==="ONLINE" ? "Facility switched to OFFLINE mode (simulated)" : "Facility restored to ONLINE mode");
+  }
+  function manualOverride(reason, lane){
+    logAudit("Manual barrier override", `${lane} barrier force-opened. Reason: "${reason}"`);
+    pushFeed("alert", `Manual override — ${lane} barrier opened by ${ROLES.find(r=>r.id===role)?.label}. Reason: ${reason}`);
+  }
+
+  const ctx = {
+    role, now, sessions, subs, zones, rates, blacklist, health, systemStatus, emergency, audit, feed, notifications,
+    processedRefs, customerId, setCustomerId, entryLane, exitLane,
+    totalSpaces, occupiedSpaces, availableSpaces, occPct, parkedSessions, completedToday, revenueToday,
+    failedPaymentsCount, securityAlertsCount, activeSubsCount,
+    findVehicle, findCustomer, subForVehicle,
+    simulateEntry, resetEntryLane, startExit, choosePaymentMethod, completeExit, retryPayment, replayWebhook,
+    renewSub, toggleSuspend, cancelSub, buyNewSub,
+    updateBracketFee, saveRates, setRates,
+    addBlacklist, removeBlacklist,
+    activateEmergency, deactivateEmergency, broadcast,
+    setComponentHealth, toggleConnectivity, manualOverride,
+    logAudit, pushFeed,
+  };
+
+  const visibleNav = NAV.filter(n => n.roles.includes(role));
+  useEffect(()=>{ if(!visibleNav.find(n=>n.id===page)) setPage(visibleNav[0]?.id || "console"); }, [role]);
+
+  return (
+    <div className="shell">
+      <div className="sidebar">
+        <div className="brand">
+          <div className="brand-mark"><Icon name="gate" size={15} color="#04241a"/></div>
+          <div>
+            <div className="brand-name">Kito</div>
+            <div className="brand-sub">Parking operations</div>
+          </div>
+        </div>
+        <div className="nav-group-label">Workspace</div>
+        {visibleNav.map(n => (
+          <div key={n.id} className={"nav-item" + (page===n.id?" active":"")} onClick={()=>setPage(n.id)}>
+            <Icon name={n.icon} size={15}/>{n.label}
+          </div>
+        ))}
+        <div className="sidebar-foot">
+          <div style={{position:"relative"}}>
+            <div className="role-pill" onClick={()=>setShowRoleMenu(s=>!s)}>
+              <span className="flex gap-8" style={{alignItems:"center"}}><Icon name="user" size={14}/>{ROLES.find(r=>r.id===role)?.label}</span>
+              <Icon name="chevron" size={12}/>
+            </div>
+            {showRoleMenu && (
+              <div className="panel" style={{position:"absolute", bottom:"110%", left:0, right:0, padding:6, zIndex:50}}>
+                {ROLES.map(r => (
+                  <div key={r.id} className="nav-item" style={{fontSize:12.5}} onClick={()=>{setRole(r.id); setShowRoleMenu(false);}}>
+                    <Icon name={r.icon} size={14}/>{r.label}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="main">
+        {emergency.active && (
+          <div className="emg-banner">
+            <div className="flex gap-10" style={{alignItems:"center"}}>
+              <Icon name="siren" size={18} color="#FF9E8A"/>
+              <div><strong>Emergency — evacuate.</strong> {emergency.message || "Please move to the nearest safe exit."} Your safety comes first — do not return for your vehicle unless emergency personnel confirm it is safe.</div>
+            </div>
+            {["owner","manager","security"].includes(role) && <button className="btn btn-sm" onClick={()=>setPage("emergency")}>Open emergency center</button>}
+          </div>
+        )}
+        <div className="topbar">
+          <div className="topbar-left">
+            <span className="status-chip"><HealthDot status={systemStatus==="ONLINE"?"online":systemStatus==="DEGRADED"?"warning":"offline"}/>{systemStatus}</span>
+            <span className="status-chip"><Icon name="layers" size={13}/>{occupiedSpaces}/{totalSpaces} occupied</span>
+            <span className="clock mono">{fmtClock(now)}</span>
+          </div>
+          <div className="topbar-right">
+            <span className="status-chip"><Icon name="bell" size={13}/>{notifications.length} alerts</span>
+          </div>
+        </div>
+
+        <div className="page">
+          {page==="console" && <ConsolePage ctx={ctx}/>}
+          {page==="occupancy" && <OccupancyPage ctx={ctx} setZones={setZones}/>}
+          {page==="rates" && <RatesPage ctx={ctx}/>}
+          {page==="subscriptions" && <SubscriptionsPage ctx={ctx}/>}
+          {page==="finance" && <FinancePage ctx={ctx}/>}
+          {page==="security" && <SecurityPage ctx={ctx}/>}
+          {page==="emergency" && <EmergencyPage ctx={ctx}/>}
+          {page==="customer" && <CustomerPage ctx={ctx}/>}
+          {page==="analytics" && <AnalyticsPage ctx={ctx}/>}
+          {page==="audit" && <AuditPage ctx={ctx}/>}
+          {page==="health" && <HealthPage ctx={ctx}/>}
+          {page==="platform" && <PlatformPage ctx={ctx}/>}
+          {page==="employees" && <EmployeesPage ctx={ctx}/>}
+          {page==="docs" && <DocsPage/>}
+        </div>
+      </div>
+
+      <div className="floating-sim">
+        <button className="btn btn-primary" onClick={()=>setShowSim(s=>!s)} style={{borderRadius:30, padding:"11px 16px"}}>
+          <Icon name="bolt" size={15}/> Simulator
+        </button>
+      </div>
+      {showSim && <SimDrawer ctx={ctx} onClose={()=>setShowSim(false)}/>}
+    </div>
+  );
+}
+
+/* ============================================================
+   SIMULATOR DRAWER (Phase 49 — demo/simulation environment)
+   ============================================================ */
+function SimDrawer({ctx, onClose}){
+  const knownVehicle = VEHICLES[Math.floor(Math.random()*VEHICLES.length)];
+  return (
+    <div className="sim-drawer">
+      <div className="flex-between" style={{marginBottom:10}}>
+        <strong style={{fontSize:13}}>Scenario simulator</strong>
+        <span onClick={onClose} style={{cursor:"pointer"}}><Icon name="x" size={14}/></span>
+      </div>
+      <div className="faint" style={{fontSize:11.5, marginBottom:10}}>Runs without physical ANPR/barrier/payment hardware — for demos and rehearsals.</div>
+      <div style={{display:"flex", flexDirection:"column", gap:7}}>
+        <button className="btn btn-sm" onClick={()=>ctx.simulateEntry(knownVehicle.id)}>Spawn known-vehicle arrival</button>
+        <button className="btn btn-sm" onClick={()=>ctx.simulateEntry("unknown")}>Spawn unregistered arrival</button>
+        <button className="btn btn-sm" onClick={()=>ctx.simulateEntry("KXX 000Z")}>Spawn watchlisted arrival</button>
+        <button className="btn btn-sm" onClick={()=>ctx.setComponentHealth("mpesa", ctx.health.mpesa==="online"?"offline":"online")}>
+          {ctx.health.mpesa==="online" ? "Simulate M-Pesa outage" : "Restore M-Pesa"}
+        </button>
+        <button className="btn btn-sm" onClick={ctx.toggleConnectivity}>{ctx.systemStatus==="ONLINE" ? "Simulate connectivity loss" : "Restore connectivity"}</button>
+        {!ctx.emergency.active
+          ? <button className="btn btn-sm btn-danger" onClick={()=>ctx.activateEmergency("Fire", "Fire alarm triggered on Level B1.")}>Trigger fire emergency</button>
+          : <button className="btn btn-sm btn-primary" onClick={ctx.deactivateEmergency}>Deactivate emergency</button>}
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   LIVE CONSOLE — entry/exit lane simulator + activity feed
+   ============================================================ */
+function ConsolePage({ctx}){
+  const [pickVehicle, setPickVehicle] = useState(VEHICLES[0].id);
+  const {entryLane, exitLane} = ctx;
+
+  return (
+    <div>
+      <div className="page-head">
+        <div>
+          <h1 className="page-title">Live console</h1>
+          <div className="page-sub">Identification → billing → payment → barrier — end to end, in seconds.</div>
+        </div>
+      </div>
+
+      <div className="grid grid-4" style={{marginBottom:16}}>
+        <Metric label="Avg entry time" value="12 sec" delta="within target" deltaType="pos"/>
+        <Metric label="Avg exit time" value="18 sec" delta="within target" deltaType="pos"/>
+        <Metric label="Payment processing" value="4 sec" delta="M-Pesa + card" />
+        <Metric label="Current queue" value={ctx.parkedSessions.length>6 ? "3 vehicles" : "0 vehicles"} />
+      </div>
+
+      <div className="grid grid-2" style={{alignItems:"start"}}>
+        <div style={{display:"flex", flexDirection:"column", gap:16}}>
+          {/* ENTRY LANE */}
+          <div className="lane-wrap">
+            <div className="lane-head">
+              <div className="flex gap-8" style={{alignItems:"center"}}><Icon name="gate"/><strong>Entry lane</strong></div>
+              <Pill cls="pill-info">ANPR + subscription check</Pill>
+            </div>
+            <Lane
+              steps={["Scan plate","Identify vehicle","Verify status","Open barrier"]}
+              activeIndex={entryLane.step==="idle" ? -1 : entryLane.step==="scanning" ? 1 : 4}
+            />
+            <div className="lane-result">
+              {entryLane.step==="idle" && (
+                <div className="flex gap-8 wrap" style={{alignItems:"center"}}>
+                  <select className="input" style={{maxWidth:220}} value={pickVehicle} onChange={e=>setPickVehicle(e.target.value)}>
+                    {VEHICLES.map(v => <option key={v.id} value={v.id}>{v.plate} — {v.make} {v.model}</option>)}
+                  </select>
+                  <button className="btn btn-primary" onClick={()=>ctx.simulateEntry(pickVehicle)}>Simulate arrival</button>
+                  <button className="btn" onClick={()=>ctx.simulateEntry("unknown")}>Unregistered vehicle</button>
+                </div>
+              )}
+              {entryLane.step==="scanning" && (
+                <div className="callout">Scanning plate <span className="plate">{entryLane.data.plate}</span>…</div>
+              )}
+              {entryLane.step==="result" && <EntryResult data={entryLane.data} ctx={ctx}/>}
+            </div>
+          </div>
+
+          {/* EXIT LANE */}
+          <div className="lane-wrap">
+            <div className="lane-head">
+              <div className="flex gap-8" style={{alignItems:"center"}}><Icon name="gate"/><strong>Exit lane</strong></div>
+              <Pill cls="pill-info">Billing + payment verification</Pill>
+            </div>
+            <Lane
+              steps={["Identify session","Calculate fee","Verify payment","Open barrier"]}
+              activeIndex={exitLane.step==="idle" ? -1 : exitLane.step==="calculating" ? 1 : exitLane.step==="payment" ? 2 : 4}
+            />
+            <div className="lane-result">
+              {exitLane.step==="idle" && (
+                <div>
+                  <div className="faint" style={{marginBottom:8, fontSize:12.5}}>Vehicles currently parked — select one to process exit:</div>
+                  <div className="flex gap-8 wrap">
+                    {ctx.parkedSessions.length===0 && <span className="faint">No vehicles currently parked.</span>}
+                    {ctx.parkedSessions.map(s => (
+                      <span key={s.id} className="chip" onClick={()=>ctx.startExit(s.id)}>
+                        <span className="plate">{s.plate}</span> · {fmtDuration(Date.now()-s.entry.getTime())}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {exitLane.step==="calculating" && <div className="callout">Calculating parking duration and fee for <span className="plate">{exitLane.data.session.plate}</span>…</div>}
+              {exitLane.step==="payment" && <ExitPayment ctx={ctx}/>}
+              {exitLane.step==="result" && <ExitResult ctx={ctx}/>}
+            </div>
+          </div>
+        </div>
+
+        <div className="panel">
+          <div className="panel-title">Live activity feed</div>
+          <ActivityFeed feed={ctx.feed}/>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Lane({steps, activeIndex}){
+  return (
+    <div className="lane-track">
+      <div className="lane-progress"><div className="lane-progress-fill" style={{width: activeIndex<0 ? "0%" : (activeIndex/(steps.length-1))*100+"%"}}></div></div>
+      <div className="lane-steps">
+        {steps.map((s,i)=>(
+          <div key={i} className={"lane-step" + (i<activeIndex?" done":"") + (i===activeIndex?" active":"")}>
+            <div className="node"></div>{s}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function EntryResult({data, ctx}){
+  const {plate, decision} = data;
+  if (decision === "security"){
+    return (
+      <div className="result-card stop">
+        <Icon name="alert" color="var(--stop)"/>
+        <div>
+          <div><strong>Security alert</strong> — <span className="plate">{plate}</span> matches watchlist: {data.flagged.status}</div>
+          <div className="faint" style={{fontSize:12}}>{data.flagged.reason}. Entry held pending manual verification.</div>
+        </div>
+        <button className="btn btn-sm" style={{marginLeft:"auto"}} onClick={ctx.resetEntryLane}>Dismiss</button>
+      </div>
+    );
+  }
+  if (decision === "subscription"){
+    const stat = subStatus(data.sub.expiresAt, data.sub.suspended, data.sub.cancelled);
+    return (
+      <div className="result-card go">
+        <Icon name="check" color="var(--go)"/>
+        <div>
+          <div><strong><span className="plate">{plate}</span> — subscription verified</strong></div>
+          <div className="faint" style={{fontSize:12}}>Sticker {data.sub.stickerId} · {stat} · Barrier opened, no stop required.</div>
+        </div>
+        <button className="btn btn-sm" style={{marginLeft:"auto"}} onClick={ctx.resetEntryLane}>Clear</button>
+      </div>
+    );
+  }
+  if (decision === "known"){
+    return (
+      <div className="result-card info">
+        <Icon name="check" color="var(--scan)"/>
+        <div>
+          <div><strong><span className="plate">{plate}</span> — pay-as-you-go session opened</strong></div>
+          <div className="faint" style={{fontSize:12}}>{data.vehicle.make} {data.vehicle.model} · Barrier opened · Fee will be calculated at exit.</div>
+        </div>
+        <button className="btn btn-sm" style={{marginLeft:"auto"}} onClick={ctx.resetEntryLane}>Clear</button>
+      </div>
+    );
+  }
+  return (
+    <div className="result-card warn">
+      <Icon name="alert" color="var(--warn)"/>
+      <div>
+        <div><strong><span className="plate">{plate}</span> — unregistered vehicle</strong></div>
+        <div className="faint" style={{fontSize:12}}>Temporary session opened. Payment collectible via mobile money, card, QR or kiosk before exit.</div>
+      </div>
+      <button className="btn btn-sm" style={{marginLeft:"auto"}} onClick={ctx.resetEntryLane}>Clear</button>
+    </div>
+  );
+}
+
+function ExitPayment({ctx}){
+  const {session, minutes, fee, hasActiveSub, method, processing, outcome} = ctx.exitLane.data;
+  useEffect(()=>{
+    if (hasActiveSub && !processing && !method){
+      const t = setTimeout(()=>ctx.choosePaymentMethod("subscription"), 400);
+      return ()=>clearTimeout(t);
+    }
+  }, [hasActiveSub, processing, method]);
+  if (hasActiveSub){
+    return <div className="callout">Subscription covers this session — no charge. Opening barrier…</div>;
+  }
+  if (!method){
+    return (
+      <div>
+        <div className="flex-between" style={{marginBottom:10}}>
+          <div><span className="plate">{session.plate}</span> · parked {fmtDuration(minutes*60000)}</div>
+          <div style={{fontFamily:"var(--disp)", fontSize:18}}>{KES(fee)}</div>
+        </div>
+        <div className="faint" style={{fontSize:12, marginBottom:8}}>Choose a payment method to simulate:</div>
+        <div className="flex gap-8 wrap">
+          <button className="btn btn-primary btn-sm" onClick={()=>ctx.choosePaymentMethod("mpesa")}>M-Pesa prompt</button>
+          <button className="btn btn-sm" onClick={()=>ctx.choosePaymentMethod("card")}>Saved card</button>
+          <button className="btn btn-sm" onClick={()=>ctx.choosePaymentMethod("cash")}>Attendant / cash</button>
+        </div>
+      </div>
+    );
+  }
+  return <div className="callout">{method==="mpesa" ? "STK push sent — waiting for customer PIN…" : method==="card" ? "Charging saved card via payment provider…" : "Attendant confirming cash payment…"}</div>;
+}
+
+function ExitResult({ctx}){
+  const {session, fee, method, outcome, reference, hasActiveSub} = ctx.exitLane.data;
+  if (hasActiveSub || (outcome && outcome.status==="success")){
+    return (
+      <div className="result-card go">
+        <Icon name="check" color="var(--go)"/>
+        <div>
+          <div><strong><span className="plate">{session.plate}</span> — payment confirmed</strong></div>
+          <div className="faint" style={{fontSize:12}}>{hasActiveSub ? "Covered by subscription" : `${KES(fee)} via ${method?.toUpperCase()} · Ref ${reference}`} · Barrier opening.</div>
+        </div>
+        <button className="btn btn-sm btn-primary" style={{marginLeft:"auto"}} onClick={ctx.completeExit}>Open barrier & close session</button>
+      </div>
+    );
+  }
+  if (outcome.status === "queued"){
+    return (
+      <div className="result-card warn">
+        <Icon name="clock" color="var(--warn)"/>
+        <div>
+          <div><strong><span className="plate">{session.plate}</span> — payment queued (offline mode)</strong></div>
+          <div className="faint" style={{fontSize:12}}>Session recorded locally. Will sync and settle once connectivity returns — no false success reported.</div>
+        </div>
+        <button className="btn btn-sm btn-primary" style={{marginLeft:"auto"}} onClick={ctx.completeExit}>Open barrier (manager authorized)</button>
+      </div>
+    );
+  }
+  return (
+    <div className="result-card stop">
+      <Icon name="x" color="var(--stop)"/>
+      <div>
+        <div><strong>Payment unsuccessful</strong> — {outcome.reason}</div>
+        <div className="flex gap-8 wrap" style={{marginTop:8}}>
+          <button className="btn btn-sm" onClick={()=>ctx.retryPayment(method)}>Retry same method</button>
+          <button className="btn btn-sm" onClick={()=>ctx.retryPayment("card")}>Try card instead</button>
+          <button className="btn btn-sm" onClick={()=>ctx.retryPayment("cash")}>Pay attendant</button>
+          <button className="btn btn-sm btn-ghost" onClick={ctx.replayWebhook}>Replay duplicate webhook (idempotency test)</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ActivityFeed({feed}){
+  const colorFor = k => ({entry:"var(--go)", exit:"var(--scan)", payment:"var(--go)", alert:"var(--warn)", security:"var(--stop)", info:"var(--text-faint)"}[k] || "var(--text-faint)");
+  return (
+    <div className="feed">
+      {[...feed].reverse().map(f => (
+        <div key={f.id} className="feed-item">
+          <span className="feed-time">{fmtClock(f.ts)}</span>
+          <span className="feed-dot" style={{background:colorFor(f.kind)}}></span>
+          <span>{f.text}</span>
+        </div>
+      ))}
+      {feed.length===0 && <div className="faint">No activity yet — run the simulator to generate events.</div>}
+    </div>
+  );
+}
+
+/* ============================================================
+   OCCUPANCY
+   ============================================================ */
+function OccupancyPage({ctx, setZones}){
+  return (
+    <div>
+      <div className="page-head">
+        <div><h1 className="page-title">Occupancy & zones</h1><div className="page-sub">Real-time capacity across the facility.</div></div>
+      </div>
+      <div className="grid grid-4" style={{marginBottom:16}}>
+        <Metric label="Total spaces" value={ctx.totalSpaces}/>
+        <Metric label="Occupied" value={ctx.occupiedSpaces} delta={ctx.occPct+"% full"}/>
+        <Metric label="Available" value={ctx.availableSpaces}/>
+        <Metric label="EV / Disabled / VIP" value={`${SPECIAL_SPACES.ev} / ${SPECIAL_SPACES.disabled} / ${SPECIAL_SPACES.vip}`}/>
+      </div>
+      {["Level B1","Level B2"].map(floor => (
+        <div key={floor} className="panel" style={{marginBottom:14}}>
+          <div className="panel-title">{floor}</div>
+          <div className="grid grid-3">
+            {ctx.zones.filter(z=>z.floor===floor).map(z => {
+              const pct = Math.round((z.occupied/z.total)*100);
+              return (
+                <div key={z.id} className="metric">
+                  <div className="flex-between"><strong style={{fontSize:13}}>{z.name}</strong><span className="faint mono" style={{fontSize:12}}>{z.occupied}/{z.total}</span></div>
+                  <div style={{margin:"9px 0"}}><Bar pct={pct} color={pct>85?"var(--stop)":pct>60?"var(--warn)":"var(--go)"}/></div>
+                  <div className="faint" style={{fontSize:11.5}}>{pct}% occupied</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+      <div className="callout">Parking-sensor colour codes: <span style={{color:"var(--go)"}}>green = available</span>, <span style={{color:"var(--stop)"}}>red = occupied</span>, <span style={{color:"var(--scan)"}}>blue = reserved</span>, <span style={{color:"var(--warn)"}}>amber = temporarily unavailable</span>. Every status pairs an icon and label with colour so it isn't colour-only.</div>
+    </div>
+  );
+}
+
+/* ============================================================
+   RATES (owner only)
+   ============================================================ */
+function RatesPage({ctx}){
+  const [local, setLocal] = useState(JSON.parse(JSON.stringify(ctx.rates)).brackets.map(b=>b.fee));
+  return (
+    <div>
+      <div className="page-head">
+        <div><h1 className="page-title">Billing & rates</h1><div className="page-sub">Configurable pricing — no hard-coded fees. Changes are audit-logged.</div></div>
+        <button className="btn btn-primary" onClick={()=>{
+          ctx.setRates(r=>({...r, brackets: r.brackets.map((b,i)=>({...b, fee:Number(local[i])}))}));
+          ctx.saveRates();
+        }}>Save changes</button>
+      </div>
+
+      <div className="grid grid-2">
+        <div className="panel">
+          <div className="panel-title">Duration brackets</div>
+          <table className="data">
+            <thead><tr><th>Bracket</th><th>Fee (KES)</th></tr></thead>
+            <tbody>
+              {ctx.rates.brackets.map((b,i)=>(
+                <tr key={i}>
+                  <td>{b.label}</td>
+                  <td><input className="input" style={{width:110}} type="number" value={local[i]} onChange={e=>setLocal(l=>l.map((v,idx)=>idx===i?e.target.value:v))}/></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="hr"></div>
+          <div className="field"><label className="field-label">Grace period (minutes)</label>
+            <input className="input" type="number" value={ctx.rates.gracePeriodMinutes} onChange={e=>ctx.setRates(r=>({...r, gracePeriodMinutes:Number(e.target.value)}))}/></div>
+          <div className="field"><label className="field-label">Maximum daily charge (KES)</label>
+            <input className="input" type="number" value={ctx.rates.maxDaily} onChange={e=>ctx.setRates(r=>({...r, maxDaily:Number(e.target.value)}))}/></div>
+          <div className="field"><label className="field-label">Lost-ticket fee (KES)</label>
+            <input className="input" type="number" value={ctx.rates.lostTicketFee} onChange={e=>ctx.setRates(r=>({...r, lostTicketFee:Number(e.target.value)}))}/></div>
+        </div>
+
+        <div className="panel">
+          <div className="panel-title">Vehicle-type multiplier</div>
+          {Object.entries(ctx.rates.vehicleMultiplier).map(([k,v]) => (
+            <div className="field" key={k}>
+              <label className="field-label" style={{textTransform:"capitalize"}}>{k}</label>
+              <input className="input" type="number" step="0.05" value={v} onChange={e=>ctx.setRates(r=>({...r, vehicleMultiplier:{...r.vehicleMultiplier, [k]:Number(e.target.value)}}))}/>
+            </div>
+          ))}
+          <div className="hr"></div>
+          <div className="field"><label className="field-label">Weekend multiplier</label>
+            <input className="input" type="number" step="0.05" value={ctx.rates.weekendMultiplier} onChange={e=>ctx.setRates(r=>({...r, weekendMultiplier:Number(e.target.value)}))}/></div>
+          <div className="callout">Live preview — a car parked 3 hours today costs <strong>{KES(calcFee(180,"car",ctx.rates))}</strong>; an SUV for 6 hours costs <strong>{KES(calcFee(360,"suv",ctx.rates))}</strong>.</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   SUBSCRIPTIONS
+   ============================================================ */
+function SubscriptionsPage({ctx}){
+  const isCustomer = ctx.role === "customer";
+  const rows = isCustomer ? ctx.subs.filter(s => ctx.findVehicle(s.vehicleId)?.ownerId === ctx.customerId) : ctx.subs;
+  return (
+    <div>
+      <div className="page-head">
+        <div><h1 className="page-title">Subscriptions & stickers</h1><div className="page-sub">Digital monthly parking plans with automatic reminders.</div></div>
+      </div>
+      <div className="grid grid-4" style={{marginBottom:16}}>
+        <Metric label="Active subscriptions" value={ctx.activeSubsCount}/>
+        <Metric label="Expiring within 4 days" value={ctx.subs.filter(s=>subStatus(s.expiresAt,s.suspended,s.cancelled)==="EXPIRING SOON").length}/>
+        <Metric label="Expired" value={ctx.subs.filter(s=>subStatus(s.expiresAt,s.suspended,s.cancelled)==="EXPIRED").length}/>
+        <Metric label="Auto-renew enabled" value={ctx.subs.filter(s=>s.autoRenew).length}/>
+      </div>
+      <div className="panel">
+        <table className="data">
+          <thead><tr><th>Sticker</th><th>Vehicle</th><th>Plan</th><th>Expires</th><th>Status</th><th>Reminders</th><th></th></tr></thead>
+          <tbody>
+            {rows.map(s => {
+              const veh = ctx.findVehicle(s.vehicleId);
+              const stat = subStatus(s.expiresAt, s.suspended, s.cancelled);
+              const d = daysUntil(s.expiresAt);
+              return (
+                <tr key={s.id}>
+                  <td className="mono">{s.stickerId}</td>
+                  <td><span className="plate">{veh?.plate}</span></td>
+                  <td>{s.plan}</td>
+                  <td>{fmtDateShort(s.expiresAt)} <span className="faint">({d>=0?`${d}d left`:`${-d}d ago`})</span></td>
+                  <td><Pill cls={pillClassForSub(stat)}>{stat}</Pill></td>
+                  <td className="faint" style={{fontSize:11.5}}>7d / 3d / 1d / on-expiry</td>
+                  <td>
+                    <div className="flex gap-8">
+                      <button className="btn btn-sm" onClick={()=>ctx.renewSub(s.id)}>Renew +30d</button>
+                      {(ctx.role==="owner"||ctx.role==="manager") && <>
+                        <button className="btn btn-sm" onClick={()=>ctx.toggleSuspend(s.id)}>{s.suspended?"Unsuspend":"Suspend"}</button>
+                        <button className="btn btn-sm btn-ghost" onClick={()=>ctx.cancelSub(s.id)}>Cancel</button>
+                      </>}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      {isCustomer && <BuySubscriptionForm ctx={ctx}/>}
+    </div>
+  );
+}
+
+function BuySubscriptionForm({ctx}){
+  const myVehicles = VEHICLES.filter(v=>v.ownerId===ctx.customerId && !ctx.subs.find(s=>s.vehicleId===v.id && !s.cancelled));
+  const [vid, setVid] = useState(myVehicles[0]?.id || "");
+  if (myVehicles.length===0) return null;
+  return (
+    <div className="panel" style={{marginTop:14}}>
+      <div className="panel-title">Buy a new monthly sticker</div>
+      <div className="flex gap-8 wrap" style={{alignItems:"flex-end"}}>
+        <div className="field" style={{marginBottom:0, minWidth:220}}>
+          <label className="field-label">Vehicle</label>
+          <select className="input" value={vid} onChange={e=>setVid(e.target.value)}>
+            {myVehicles.map(v => <option key={v.id} value={v.id}>{v.plate} — {v.make} {v.model}</option>)}
+          </select>
+        </div>
+        <button className="btn btn-primary" onClick={()=>ctx.buyNewSub(vid, "Monthly — " + VEHICLES.find(v=>v.id===vid)?.type)}>Pay & activate</button>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   FINANCE
+   ============================================================ */
+function FinancePage({ctx}){
+  const completed = ctx.sessions.filter(s=>s.status==="COMPLETED");
+  const byMethod = {};
+  completed.forEach(s => { byMethod[s.method] = (byMethod[s.method]||0) + (s.fee||0); });
+  const failed = ctx.feed.filter(f=>f.kind==="alert" && f.text.toLowerCase().includes("payment"));
+
+  function exportCsv(){
+    const header = "Session ID,Plate,Entry,Exit,Fee (KES),Method,Status,Reference\n";
+    const rows = completed.map(s => [s.id, s.plate, s.entry.toISOString(), s.exit?.toISOString(), s.fee, s.method, s.paymentStatus, s.reference].join(",")).join("\n");
+    download("transactions.csv", header+rows);
+    ctx.logAudit("Financial export", "Transactions exported to CSV");
+  }
+
+  return (
+    <div>
+      <div className="page-head">
+        <div><h1 className="page-title">Payments & finance</h1><div className="page-sub">Revenue, transactions, and payment health.</div></div>
+        <button className="btn" onClick={exportCsv}><Icon name="download" size={14}/> Export CSV</button>
+      </div>
+      <div className="grid grid-4" style={{marginBottom:16}}>
+        <Metric label="Revenue today" value={KES(ctx.revenueToday)}/>
+        <Metric label="Transactions" value={completed.length}/>
+        <Metric label="Failed payments" value={failed.length} deltaType={failed.length?"neg":"pos"} delta={failed.length?"needs review":"all clear"}/>
+        <Metric label="Subscription revenue share" value="38%"/>
+      </div>
+      <div className="grid grid-2" style={{marginBottom:16}}>
+        <div className="panel">
+          <div className="panel-title">Revenue by payment method</div>
+          {Object.entries(byMethod).map(([m,v]) => (
+            <div key={m} style={{marginBottom:10}}>
+              <div className="flex-between" style={{fontSize:12.5, marginBottom:4}}><span style={{textTransform:"capitalize"}}>{m}</span><span className="mono">{KES(v)}</span></div>
+              <Bar pct={(v/(ctx.revenueToday||1))*100} color="var(--scan)"/>
+            </div>
+          ))}
+          {Object.keys(byMethod).length===0 && <div className="faint">No completed transactions yet.</div>}
+        </div>
+        <div className="panel">
+          <div className="panel-title">Failed / at-risk payments</div>
+          {failed.length===0 && <div className="faint">No failed payments logged.</div>}
+          {failed.slice(0,6).map(f => <div key={f.id} className="feed-item" style={{border:"none"}}><span className="feed-dot" style={{background:"var(--stop)"}}></span>{f.text}</div>)}
+        </div>
+      </div>
+      <div className="panel">
+        <div className="panel-title">Transactions</div>
+        <table className="data">
+          <thead><tr><th>Plate</th><th>Entry</th><th>Exit</th><th>Duration</th><th>Fee</th><th>Method</th><th>Status</th><th>Reference</th></tr></thead>
+          <tbody>
+            {completed.map(s => (
+              <tr key={s.id}>
+                <td><span className="plate">{s.plate}</span></td>
+                <td className="mono">{fmtClock(s.entry)}</td>
+                <td className="mono">{s.exit?fmtClock(s.exit):"—"}</td>
+                <td>{s.exit?fmtDuration(s.exit-s.entry):"—"}</td>
+                <td>{KES(s.fee||0)}</td>
+                <td style={{textTransform:"capitalize"}}>{s.method}</td>
+                <td><Pill cls={s.paymentStatus==="PAID"?"pill-go":"pill-warn"}>{s.paymentStatus}</Pill></td>
+                <td className="mono faint">{s.reference}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   SECURITY
+   ============================================================ */
+function SecurityPage({ctx}){
+  const [plate, setPlate] = useState("");
+  const [status, setStatus] = useState("Suspicious");
+  const [reason, setReason] = useState("");
+  const activity = ctx.feed.filter(f=>f.kind==="security" || f.kind==="alert");
+
+  return (
+    <div>
+      <div className="page-head">
+        <div><h1 className="page-title">Security & watchlist</h1><div className="page-sub">Vehicle flags, entry/exit history, and incident response.</div></div>
+      </div>
+      <div className="grid grid-2" style={{marginBottom:16}}>
+        <div className="panel">
+          <div className="panel-title">Watchlist</div>
+          <table className="data">
+            <thead><tr><th>Plate</th><th>Status</th><th>Reason</th><th>Added</th><th></th></tr></thead>
+            <tbody>
+              {ctx.blacklist.map(b => (
+                <tr key={b.id}>
+                  <td><span className="plate">{b.plate}</span></td>
+                  <td><Pill cls="pill-stop">{b.status}</Pill></td>
+                  <td className="faint">{b.reason}</td>
+                  <td className="faint">{fmtDateShort(b.addedAt)}</td>
+                  <td><button className="btn btn-sm btn-ghost" onClick={()=>ctx.removeBlacklist(b.id)}>Remove</button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="hr"></div>
+          <div className="flex gap-8 wrap" style={{alignItems:"flex-end"}}>
+            <div className="field" style={{marginBottom:0}}><label className="field-label">Plate</label><input className="input" style={{width:130}} value={plate} onChange={e=>setPlate(e.target.value.toUpperCase())} placeholder="KAA 000A"/></div>
+            <div className="field" style={{marginBottom:0}}><label className="field-label">Status</label>
+              <select className="input" value={status} onChange={e=>setStatus(e.target.value)}>
+                <option>Suspicious</option><option>Blacklisted</option><option>Stolen</option><option>Unauthorized</option>
+              </select>
+            </div>
+            <div className="field" style={{marginBottom:0, flex:1, minWidth:160}}><label className="field-label">Reason</label><input className="input" value={reason} onChange={e=>setReason(e.target.value)} placeholder="Reason for flag"/></div>
+            <button className="btn btn-primary" onClick={()=>{ if(plate&&reason){ ctx.addBlacklist(plate,status,reason); setPlate(""); setReason(""); } }}>Add to watchlist</button>
+          </div>
+        </div>
+
+        <div className="panel">
+          <div className="panel-title">Security events</div>
+          <div className="feed" style={{maxHeight:340}}>
+            {[...activity].reverse().map(f => (
+              <div key={f.id} className="feed-item"><span className="feed-time">{fmtClock(f.ts)}</span><span className="feed-dot" style={{background:"var(--stop)"}}></span><span>{f.text}</span></div>
+            ))}
+            {activity.length===0 && <div className="faint">No security events logged.</div>}
+          </div>
+        </div>
+      </div>
+
+      <ManualOverride ctx={ctx}/>
+    </div>
+  );
+}
+
+function ManualOverride({ctx}){
+  const [reason, setReason] = useState("");
+  const [lane, setLane] = useState("Entry");
+  return (
+    <div className="panel">
+      <div className="panel-title">Manual barrier override</div>
+      <div className="callout warn" style={{marginBottom:12}}>Every override is permission-gated and recorded with user, timestamp, lane, and reason — never a silent action.</div>
+      <div className="flex gap-8 wrap" style={{alignItems:"flex-end"}}>
+        <div className="field" style={{marginBottom:0}}><label className="field-label">Lane</label>
+          <select className="input" value={lane} onChange={e=>setLane(e.target.value)}><option>Entry</option><option>Exit</option></select>
+        </div>
+        <div className="field" style={{marginBottom:0, flex:1, minWidth:200}}><label className="field-label">Reason (required)</label>
+          <input className="input" value={reason} onChange={e=>setReason(e.target.value)} placeholder="e.g. Barrier sensor fault"/>
+        </div>
+        <button className="btn btn-danger" disabled={!reason} onClick={()=>{ ctx.manualOverride(reason, lane); setReason(""); }}>Force open barrier</button>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   EMERGENCY CENTER
+   ============================================================ */
+function EmergencyPage({ctx}){
+  const [category, setCategory] = useState("Fire");
+  const [message, setMessage] = useState("");
+  const [channels, setChannels] = useState({dashboard:true, sms:true, push:true, email:false});
+  const [broadcastText, setBroadcastText] = useState("Please evacuate the parking facility immediately using the nearest safe exit. Do not return for your vehicle. Proceed to the designated assembly point.");
+
+  return (
+    <div>
+      <div className="page-head">
+        <div><h1 className="page-title">Emergency & safety center</h1><div className="page-sub">Human safety first. Vehicles are secondary.</div></div>
+      </div>
+
+      <div className="callout danger" style={{marginBottom:16}}>
+        This module manages communication, access control, and coordination. It does not replace certified fire alarms, sprinklers, or life-safety hardware — those systems must be installed and certified by qualified professionals, with procedures reviewed by the facility's safety officer.
+      </div>
+
+      <div className="grid grid-2" style={{marginBottom:16}}>
+        <div className="panel">
+          <div className="panel-title">Status</div>
+          {!ctx.emergency.active ? (
+            <div>
+              <Pill cls="pill-go">Normal operations</Pill>
+              <div className="hr"></div>
+              <div className="field"><label className="field-label">Emergency category</label>
+                <select className="input" value={category} onChange={e=>setCategory(e.target.value)}>
+                  {["Fire","Smoke","Explosion","Flooding","Structural damage","Power failure","Medical emergency","Security threat","Vehicle accident","Hazardous material","Natural disaster"].map(c=><option key={c}>{c}</option>)}
+                </select>
+              </div>
+              <div className="field"><label className="field-label">Notes (optional)</label><input className="input" value={message} onChange={e=>setMessage(e.target.value)}/></div>
+              <button className="btn btn-danger btn-block" onClick={()=>ctx.activateEmergency(category, message)}>Activate emergency mode</button>
+            </div>
+          ) : (
+            <div>
+              <Pill cls="pill-stop">Emergency active — {ctx.emergency.category}</Pill>
+              <div className="faint" style={{fontSize:12, margin:"8px 0"}}>Activated {fmtClock(ctx.emergency.activatedAt)} · New entries suspended · Existing exits still permitted for evacuating drivers if safe.</div>
+              <button className="btn btn-primary btn-block" onClick={ctx.deactivateEmergency}>Declare all-clear & deactivate</button>
+            </div>
+          )}
+        </div>
+
+        <div className="panel">
+          <div className="panel-title">Broadcast</div>
+          <div className="field"><label className="field-label">Message</label><textarea className="input" rows={3} value={broadcastText} onChange={e=>setBroadcastText(e.target.value)}/></div>
+          <div className="flex gap-8 wrap" style={{marginBottom:12}}>
+            {Object.keys(channels).map(c => (
+              <label key={c} className="legend-row" style={{cursor:"pointer"}}>
+                <input type="checkbox" checked={channels[c]} onChange={e=>setChannels(ch=>({...ch,[c]:e.target.checked}))}/> {c}
+              </label>
+            ))}
+          </div>
+          <button className="btn btn-primary" onClick={()=>ctx.broadcast(Object.keys(channels).filter(c=>channels[c]), broadcastText)}>Send broadcast</button>
+        </div>
+      </div>
+
+      <div className="grid grid-2">
+        <div className="panel">
+          <div className="panel-title">Evacuation guidance — if you discover fire</div>
+          <ol style={{margin:0, paddingLeft:18, color:"var(--text-dim)", fontSize:13, lineHeight:1.9}}>
+            <li>Raise the alarm.</li>
+            <li>Move away from the immediate danger.</li>
+            <li>Use the nearest safe emergency exit.</li>
+            <li>Do not use elevators where unsafe.</li>
+            <li>Do not return for belongings or vehicles.</li>
+            <li>Proceed to the designated assembly point.</li>
+            <li>Follow instructions from emergency personnel.</li>
+          </ol>
+          <div className="field" style={{marginTop:12}}><label className="field-label">Assembly point (facility-configured)</label>
+            <input className="input" value={ctx.emergency.assemblyPoint} onChange={e=>ctx.logAudit("Assembly point updated", e.target.value)} disabled/>
+          </div>
+          <div className="faint" style={{fontSize:11.5}}>Procedures and maps must be configured by the facility's safety officer to match the real building — nothing here is invented.</div>
+        </div>
+        <div className="panel">
+          <div className="panel-title">Vehicles currently inside</div>
+          <table className="data">
+            <thead><tr><th>Plate</th><th>Owner contact</th><th>Status</th></tr></thead>
+            <tbody>
+              {ctx.parkedSessions.map(s => {
+                const veh = ctx.findVehicle(s.vehicleId); const cust = veh ? ctx.findCustomer(veh.ownerId) : null;
+                return <tr key={s.id}><td><span className="plate">{s.plate}</span></td><td className="faint">{cust?.phone || "Unknown — walk-in"}</td><td><Pill cls="pill-warn">Remaining</Pill></td></tr>;
+              })}
+              {ctx.parkedSessions.length===0 && <tr><td colSpan={3} className="faint">No vehicles currently inside.</td></tr>}
+            </tbody>
+          </table>
+          <div className="faint" style={{fontSize:11.5, marginTop:8}}>Visible to authorized personnel only. Ordinary customers are never instructed to return for a vehicle during an active emergency — relocation, if safe, is coordinated by trained staff or emergency services only.</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   CUSTOMER PORTAL
+   ============================================================ */
+function CustomerPage({ctx}){
+  const cust = ctx.findCustomer(ctx.customerId);
+  const myVehicles = VEHICLES.filter(v=>v.ownerId===ctx.customerId);
+  const [receiptFor, setReceiptFor] = useState(null);
+
+  return (
+    <div>
+      <div className="page-head">
+        <div><h1 className="page-title">My parking</h1><div className="page-sub">Signed in as {cust.name}</div></div>
+        <select className="input" style={{maxWidth:220}} value={ctx.customerId} onChange={e=>ctx.setCustomerId(e.target.value)}>
+          {CUSTOMERS.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+      </div>
+
+      <div className="grid grid-2" style={{marginBottom:16}}>
+        {myVehicles.map(v => {
+          const sub = ctx.subForVehicle(v.id);
+          const session = ctx.sessions.find(s=>s.vehicleId===v.id && s.status==="PARKED");
+          const stat = sub ? subStatus(sub.expiresAt, sub.suspended, sub.cancelled) : null;
+          return (
+            <div key={v.id} className="panel">
+              <div className="flex-between">
+                <div><strong style={{fontSize:15}}><span className="plate">{v.plate}</span></strong><div className="faint" style={{fontSize:12}}>{v.make} {v.model} · {v.color}</div></div>
+                <Pill cls={session?"pill-go":"pill-mute"}>{session?"Parked now":"Not parked"}</Pill>
+              </div>
+              <div className="hr"></div>
+              {sub ? (
+                <div className="flex-between" style={{marginBottom:10}}>
+                  <div><div className="faint" style={{fontSize:11.5}}>Subscription</div><Pill cls={pillClassForSub(stat)}>{stat}</Pill></div>
+                  <div style={{textAlign:"right"}}><div className="faint" style={{fontSize:11.5}}>Expires</div><div>{fmtDateShort(sub.expiresAt)}</div></div>
+                </div>
+              ) : <div className="faint" style={{fontSize:12.5, marginBottom:10}}>No active subscription — pay-as-you-go.</div>}
+              <div className="flex gap-8 wrap">
+                {!session && <button className="btn btn-sm btn-primary" onClick={()=>ctx.simulateEntry(v.id)}>Simulate park</button>}
+                {sub && <button className="btn btn-sm" onClick={()=>ctx.renewSub(sub.id)}>Renew</button>}
+                {session && !sub && <button className="btn btn-sm" onClick={()=>ctx.startExit(session.id)}>Pay & exit</button>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="panel">
+        <div className="panel-title">Parking history</div>
+        <table className="data">
+          <thead><tr><th>Vehicle</th><th>Entry</th><th>Exit</th><th>Fee</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            {ctx.sessions.filter(s=>myVehicles.find(v=>v.id===s.vehicleId) && s.status==="COMPLETED").map(s => (
+              <tr key={s.id}>
+                <td><span className="plate">{s.plate}</span></td>
+                <td className="mono">{fmtClock(s.entry)}, {fmtDateShort(s.entry)}</td>
+                <td className="mono">{s.exit?fmtClock(s.exit):"—"}</td>
+                <td>{KES(s.fee||0)}</td>
+                <td><Pill cls="pill-go">{s.paymentStatus}</Pill></td>
+                <td><button className="btn btn-sm btn-ghost" onClick={()=>setReceiptFor(s)}>Receipt</button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {receiptFor && (
+        <Modal title="Receipt" onClose={()=>setReceiptFor(null)} width={380}>
+          <div className="mono" style={{fontSize:12.5, lineHeight:2}}>
+            Kito Parking Facility — Kisumu Mall<br/>
+            Vehicle: {receiptFor.plate}<br/>
+            Entry: {fmtClock(receiptFor.entry)}, {fmtDateShort(receiptFor.entry)}<br/>
+            Exit: {receiptFor.exit ? fmtClock(receiptFor.exit) : "—"}<br/>
+            Duration: {receiptFor.exit ? fmtDuration(receiptFor.exit-receiptFor.entry) : "—"}<br/>
+            Parking fee: {KES(receiptFor.fee||0)}<br/>
+            Payment method: {receiptFor.method}<br/>
+            Transaction ID: {receiptFor.reference}<br/>
+            Status: {receiptFor.paymentStatus}
+          </div>
+          <button className="btn btn-primary btn-block" style={{marginTop:14}} onClick={()=>download(`receipt-${receiptFor.plate}.txt`, `Kito Parking Facility\nVehicle: ${receiptFor.plate}\nEntry: ${receiptFor.entry}\nExit: ${receiptFor.exit}\nFee: ${KES(receiptFor.fee||0)}\nMethod: ${receiptFor.method}\nRef: ${receiptFor.reference}`)}>
+            <Icon name="download" size={14}/> Download
+          </button>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+/* ============================================================
+   ANALYTICS
+   ============================================================ */
+function AnalyticsPage({ctx}){
+  const days = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+  const demoRevenue = [42000,38500,51200,47800,63400,81200,ctx.revenueToday||58900];
+  const maxRev = Math.max(...demoRevenue);
+  const methodSplit = {"M-Pesa":64, "Card":27, "Cash":9};
+
+  return (
+    <div>
+      <div className="page-head">
+        <div><h1 className="page-title">Analytics & reports</h1><div className="page-sub">Insight, not just data.</div></div>
+      </div>
+      <div className="grid grid-2" style={{marginBottom:16}}>
+        <div className="panel">
+          <div className="panel-title">Revenue — last 7 days</div>
+          <div style={{display:"flex", alignItems:"flex-end", gap:10, height:140}}>
+            {demoRevenue.map((v,i) => (
+              <div key={i} style={{flex:1, textAlign:"center"}}>
+                <div style={{height: (v/maxRev)*110, background: i===6?"var(--go)":"var(--scan-dim)", border:"1px solid " + (i===6?"var(--go)":"var(--scan)"), borderRadius:4}}></div>
+                <div className="faint" style={{fontSize:10.5, marginTop:6}}>{days[i]}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="panel">
+          <div className="panel-title">Payment method split</div>
+          {Object.entries(methodSplit).map(([k,v])=>(
+            <div key={k} style={{marginBottom:10}}>
+              <div className="flex-between" style={{fontSize:12.5, marginBottom:4}}><span>{k}</span><span>{v}%</span></div>
+              <Bar pct={v} color="var(--violet)"/>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="panel" style={{marginBottom:16}}>
+        <div className="panel-title">Operational insights</div>
+        <ul style={{margin:0, paddingLeft:18, color:"var(--text-dim)", lineHeight:2}}>
+          <li>Peak occupancy typically occurs between 12:00–14:00.</li>
+          <li>Exit queues tend to increase sharply between 17:00–18:30.</li>
+          <li>Mobile money accounts for roughly two-thirds of transactions.</li>
+          <li>Monthly subscribers generate a large share of recurring revenue.</li>
+          <li>Average exit processing stays close to the 18-second target when M-Pesa is healthy.</li>
+        </ul>
+      </div>
+      <div className="callout">
+        <div className="flex gap-8" style={{alignItems:"center", marginBottom:4}}><Icon name="bolt" size={14} color="var(--warn)"/><strong>AI operations alert (illustrative)</strong></div>
+        Exit traffic is trending upward for this hour based on current queue growth. Consider opening an additional exit lane. AI output remains a recommendation — automated action would require an explicit, human-authorized rule.
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   AUDIT LOG
+   ============================================================ */
+function AuditPage({ctx}){
+  return (
+    <div>
+      <div className="page-head">
+        <div><h1 className="page-title">Audit log</h1><div className="page-sub">Every sensitive action, tamper-evident and timestamped.</div></div>
+      </div>
+      <div className="panel">
+        <table className="data">
+          <thead><tr><th>Time</th><th>User / role</th><th>Action</th><th>Detail</th></tr></thead>
+          <tbody>
+            {ctx.audit.map(a => (
+              <tr key={a.id}>
+                <td className="mono faint">{fmtClock(a.ts)} · {fmtDateShort(a.ts)}</td>
+                <td>{a.user}</td>
+                <td><strong>{a.action}</strong></td>
+                <td className="faint">{a.detail}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   SYSTEM HEALTH
+   ============================================================ */
+function HealthPage({ctx}){
+  const components = [
+    {key:"anpr", label:"ANPR cameras"}, {key:"barriers", label:"Barrier gates"},
+    {key:"paymentGateway", label:"Card payment gateway"}, {key:"mpesa", label:"M-Pesa integration"},
+    {key:"database", label:"Database"}, {key:"internet", label:"Internet connection"},
+    {key:"sensors", label:"Parking sensors"}, {key:"fireSystem", label:"Fire system integration"},
+    {key:"notifications", label:"Notification service"},
+  ];
+  return (
+    <div>
+      <div className="page-head">
+        <div><h1 className="page-title">System health</h1><div className="page-sub">Hardware and integration status, in plain language.</div></div>
+      </div>
+      <div className="grid grid-3">
+        {components.map(c => (
+          <div key={c.key} className="panel">
+            <div className="flex-between">
+              <span>{c.label}</span>
+              <span className="flex gap-8" style={{alignItems:"center"}}><HealthDot status={ctx.health[c.key]}/><span style={{textTransform:"capitalize", fontSize:12.5}}>{ctx.health[c.key]}</span></span>
+            </div>
+            <div className="hr"></div>
+            <div className="flex gap-8">
+              <button className="btn btn-sm" onClick={()=>ctx.setComponentHealth(c.key,"online")}>Online</button>
+              <button className="btn btn-sm" onClick={()=>ctx.setComponentHealth(c.key,"warning")}>Warning</button>
+              <button className="btn btn-sm" onClick={()=>ctx.setComponentHealth(c.key,"offline")}>Offline</button>
+            </div>
+          </div>
+        ))}
+      </div>
+      {ctx.health.mpesa!=="online" && (
+        <div className="callout warn" style={{marginTop:16}}>M-Pesa integration {ctx.health.mpesa} — card payments remain operational; mobile-money payments may be delayed or queued.</div>
+      )}
+    </div>
+  );
+}
+
+/* ============================================================
+   PLATFORM / MULTI-FACILITY
+   ============================================================ */
+function PlatformPage({ctx}){
+  const all = [{name:"Kisumu Mall (this facility)", spaces:ctx.totalSpaces, occupancy:ctx.occPct/100, revenueToday:ctx.revenueToday}, ...OTHER_FACILITIES];
+  const totalRevenue = all.reduce((s,f)=>s+f.revenueToday,0);
+  return (
+    <div>
+      <div className="page-head">
+        <div><h1 className="page-title">Multi-facility command center</h1><div className="page-sub">One company, several sites.</div></div>
+      </div>
+      <div className="grid grid-4" style={{marginBottom:16}}>
+        <Metric label="Facilities" value={all.length}/>
+        <Metric label="Combined spaces" value={all.reduce((s,f)=>s+f.spaces,0)}/>
+        <Metric label="Revenue today (all sites)" value={KES(totalRevenue)}/>
+        <Metric label="Average occupancy" value={Math.round(all.reduce((s,f)=>s+f.occupancy,0)/all.length*100)+"%"}/>
+      </div>
+      <div className="panel">
+        <table className="data">
+          <thead><tr><th>Facility</th><th>Spaces</th><th>Occupancy</th><th>Revenue today</th></tr></thead>
+          <tbody>
+            {all.map((f,i)=>(
+              <tr key={i}>
+                <td>{f.name}</td>
+                <td>{f.spaces}</td>
+                <td style={{width:160}}><Bar pct={f.occupancy*100} color={f.occupancy>0.85?"var(--stop)":"var(--go)"}/></td>
+                <td>{KES(f.revenueToday)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="faint" style={{fontSize:12, marginTop:10}}>Other facilities shown here are illustrative placeholders — this demo runs live data for Kisumu Mall only.</div>
+    </div>
+  );
+}
+
+/* ============================================================
+   EMPLOYEES
+   ============================================================ */
+function EmployeesPage({ctx}){
+  const [list, setList] = useState(EMPLOYEES);
+  const [name, setName] = useState(""); const [erole, setErole] = useState("attendant"); const [email, setEmail] = useState("");
+  const matrix = {
+    Cashier: {"View payments":1,"Process payments":1,"Issue receipts":1,"Change rates":0,"Manage employees":0,"Modify security settings":0},
+    Manager: {"View reports":1,"Manage parking":1,"Manage customers":1,"Handle operational issues":1,"Manage owner account":0,"Change critical security settings":0},
+    Security: {"View security events":1,"View vehicle activity":1,"Handle incidents":1,"Activate emergency workflow":1,"Access financial reports":0},
+  };
+  return (
+    <div>
+      <div className="page-head">
+        <div><h1 className="page-title">Employees & roles</h1><div className="page-sub">Granular, role-based permissions.</div></div>
+      </div>
+      <div className="grid grid-2" style={{marginBottom:16}}>
+        <div className="panel">
+          <div className="panel-title">Team</div>
+          <table className="data">
+            <thead><tr><th>Name</th><th>Role</th><th>Email</th><th></th></tr></thead>
+            <tbody>
+              {list.map(e => (
+                <tr key={e.id}><td>{e.name}</td><td style={{textTransform:"capitalize"}}><Pill cls="pill-info">{e.role}</Pill></td><td className="faint">{e.email}</td>
+                  <td><button className="btn btn-sm btn-ghost" onClick={()=>{ setList(l=>l.filter(x=>x.id!==e.id)); ctx.logAudit("Employee removed", e.name+" ("+e.role+")"); }}>Remove</button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="hr"></div>
+          <div className="flex gap-8 wrap" style={{alignItems:"flex-end"}}>
+            <div className="field" style={{marginBottom:0}}><label className="field-label">Name</label><input className="input" value={name} onChange={e=>setName(e.target.value)}/></div>
+            <div className="field" style={{marginBottom:0}}><label className="field-label">Role</label>
+              <select className="input" value={erole} onChange={e=>setErole(e.target.value)}>
+                <option value="manager">Manager</option><option value="attendant">Attendant</option><option value="security">Security</option><option value="finance">Finance</option>
+              </select>
+            </div>
+            <div className="field" style={{marginBottom:0, flex:1, minWidth:160}}><label className="field-label">Email</label><input className="input" value={email} onChange={e=>setEmail(e.target.value)}/></div>
+            <button className="btn btn-primary" onClick={()=>{ if(name){ const emp={id:uid("e"),name,role:erole,email}; setList(l=>[...l,emp]); ctx.logAudit("Employee added", name+" as "+erole); setName(""); setEmail(""); } }}>Add employee</button>
+          </div>
+        </div>
+        <div className="panel">
+          <div className="panel-title">Permission matrix (illustrative)</div>
+          {Object.entries(matrix).map(([role,perms]) => (
+            <div key={role} style={{marginBottom:14}}>
+              <strong style={{fontSize:13}}>{role}</strong>
+              <div style={{marginTop:6}}>
+                {Object.entries(perms).map(([perm,ok]) => (
+                  <div key={perm} className="legend-row" style={{marginBottom:4}}>
+                    {ok ? <Icon name="check" size={13} color="var(--go)"/> : <Icon name="x" size={13} color="var(--stop)"/>} {perm}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   DOCS — API & data model reference (living documentation)
+   ============================================================ */
+function DocsPage(){
+  const endpoints = [
+    "POST   /api/vehicles",
+    "POST   /api/parking/entry",
+    "POST   /api/parking/exit",
+    "GET    /api/parking/session/:id",
+    "POST   /api/payments",
+    "POST   /api/payments/mobile-money",
+    "POST   /api/payments/card",
+    "POST   /api/subscriptions",
+    "POST   /api/subscriptions/renew",
+    "GET    /api/occupancy",
+    "POST   /api/emergency/activate",
+    "POST   /api/emergency/deactivate",
+    "GET    /api/audit-logs",
+  ].join("\n");
+  const entities = ["Users","Roles","Permissions","Customers","Vehicles","ParkingFacilities","ParkingZones","ParkingSpaces",
+    "ParkingSessions","Subscriptions","Stickers","Payments","PaymentMethods","Invoices","Receipts","EntryEvents","ExitEvents",
+    "SecurityEvents","EmergencyEvents","Notifications","AuditLogs","HardwareDevices","ParkingRates","SystemSettings"];
+  return (
+    <div>
+      <div className="page-head">
+        <div><h1 className="page-title">API & data model</h1><div className="page-sub">Reference for the backend this frontend is designed to sit on top of.</div></div>
+      </div>
+      <div className="grid grid-2">
+        <div className="panel">
+          <div className="panel-title">Core API surface</div>
+          <pre className="code-block">{endpoints}</pre>
+          <div className="faint" style={{fontSize:11.5, marginTop:8}}>Every protected endpoint requires authentication and role-based authorization. Payment endpoints require an idempotency key.</div>
+        </div>
+        <div className="panel">
+          <div className="panel-title">Core entities</div>
+          <div style={{display:"flex", flexWrap:"wrap", gap:7}}>
+            {entities.map(e => <code key={e} className="code">{e}</code>)}
+          </div>
+        </div>
+      </div>
+      <div className="callout" style={{marginTop:16}}>This screen is documentation, not a live server — there's no backend running in this environment. Point a real API implementing this contract at the same UI and the interactive screens elsewhere in this app would work against real data unchanged.</div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
